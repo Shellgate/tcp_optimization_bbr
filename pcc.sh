@@ -3,7 +3,7 @@
 # Define project variables
 project_name="Advanced TCP Optimization PCC"
 backup_and_destination_path="/etc/sysctl.conf"
-new_file_url="https://raw.githubusercontent.com/username/repo/main/sysctl.conf"
+new_file_url="https://raw.githubusercontent.com/Shellgate/pcc-tcp-optimizer/main/pcc.sh"
 
 # Display header and subheader
 echo -e "=== $project_name ==="
