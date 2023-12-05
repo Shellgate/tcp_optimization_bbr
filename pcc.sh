@@ -24,7 +24,12 @@ check_replace_flag=false
 # Function to display system information
 display_system_info() {
     echo -e "\n$bold$underline:: System Information ::$reset"
-    # Add commands to display system information here
+    # Display OS information
+    echo -e "  $bold$blue- Operating System:$reset $(lsb_release -d | cut -f2)"
+    # Display CPU information
+    echo -e "  $bold$blue- CPU:$reset $(grep 'model name' /proc/cpuinfo | head -n1 | cut -d' ' -f3-)"
+    # Display RAM information
+    echo -e "  $bold$blue- RAM:$reset $(free -m | awk '/Mem/ {print $2 " MB"}')"
 }
 
 # Function to prompt for restart
