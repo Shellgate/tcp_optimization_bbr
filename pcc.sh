@@ -23,10 +23,6 @@ display_system_info() {
     echo -e "  $bold$blue- RAM:$reset $(free -m | awk '/Mem/ {print $2 " MB"}')"
 }
 
-# Display header and subheader
-echo -e "$bold$blue=== $project_name ===$reset"
-echo -e "$bold$green:: System Report ::$reset\n"
-
 # ... (سایر بخش‌ها)
 
 # Display menu
