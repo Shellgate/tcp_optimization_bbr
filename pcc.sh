@@ -43,6 +43,9 @@ prompt_restart() {
 echo -e "$bold$blue=== $project_name ===$reset"
 echo -e "$bold$green:: System Report ::$reset\n"
 
+# Display system information before any action
+display_system_info
+
 # Display menu
 options=("Install Script" "Restore Initial Backup" "Exit")
 echo -e "$bold$green"
