@@ -63,8 +63,6 @@ select option in "${options[@]}"; do
             
             # Display success message
             echo "File successfully replaced, and a backup has been created."
-            replace_flag=true
-            check_replace_flag=true
             display_system_info
             prompt_restart
             break
@@ -73,8 +71,6 @@ select option in "${options[@]}"; do
             # Option 2: Restore Initial Backup
             cp "$backup_and_destination_path.bak" "$backup_and_destination_path"
             echo "File successfully restored from the initial backup."
-            replace_flag=true
-            check_replace_flag=true
             display_system_info
             prompt_restart
             break
@@ -89,13 +85,3 @@ select option in "${options[@]}"; do
             ;;
     esac
 done
-
-# Display replacement status in normal execution
-if $check_replace_flag; then
-    echo -e "\n$bold$underline Replacement Status:$reset"
-    if $replace_flag; then
-        echo -e "  $green The file has been replaced.$reset"
-    else
-        echo -e "  $blue The file has not been replaced.$reset"
-    fi
-fi
