@@ -23,9 +23,28 @@ display_system_info() {
     echo -e "  $bold$blue- RAM:$reset $(free -m | awk '/Mem/ {print $2 " MB"}')"
 }
 
-# ... (سایر بخش‌ها)
+# Function to prompt user for restart
+prompt_restart() {
+    read -p "Do you want to restart the system? (y/n): " restart_choice
+    case $restart_choice in
+        [Yy])
+            reboot
+            ;;
+        [Nn])
+            echo "No restart is performed. Exiting the script."
+            ;;
+        *)
+            echo "Invalid choice. No restart is performed. Exiting the script."
+            ;;
+    esac
+}
+
+# Display header and subheader
+echo -e "$bold$blue=== $project_name ===$reset"
+echo -e "$bold$green:: System Report ::$reset\n"
 
 # Display menu
+options=("Install Script" "Restore Initial Backup" "Exit")
 echo -e "$bold$green"
 PS3="Please select an option: "
 
@@ -67,8 +86,6 @@ select option in "${options[@]}"; do
             ;;
     esac
 done
-
-# ... (سایر بخش‌ها)
 
 # Display replacement status in normal execution
 if $check_replace_flag; then
