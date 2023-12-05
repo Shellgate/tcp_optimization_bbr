@@ -5,13 +5,12 @@ project_name="Advanced TCP Optimization PCC"
 backup_and_destination_path="/etc/sysctl.conf"
 new_file_url="https://raw.githubusercontent.com/Shellgate/pcc-tcp-optimizer/main/sysctl.conf"
 
-# Set formatting colors
-bold=$(tput bold)
-underline=$(tput sgr 0 1)
-reset=$(tput sgr0)
-green=$(tput setaf 2)
-yellow=$(tput setaf 3)
-blue=$(tput setaf 4)
+# Set ANSI color codes
+bold="\e[1m"
+underline="\e[4m"
+reset="\e[0m"
+green="\e[32m"
+blue="\e[34m"
 
 # Function to display system information
 display_system_info() {
