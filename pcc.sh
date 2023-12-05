@@ -5,10 +5,6 @@ project_name="Advanced TCP Optimization PCC"
 backup_and_destination_path="/etc/sysctl.conf"
 new_file_url="https://raw.githubusercontent.com/Shellgate/pcc-tcp-optimizer/main/sysctl.conf"
 
-# Display header and subheader
-echo -e "$bold$blue=== $project_name ===$reset"
-echo -e "$bold$green:: System Report ::$reset\n"
-
 # Set formatting colors
 bold=$(tput bold)
 underline=$(tput sgr 0 1)
@@ -17,13 +13,9 @@ green=$(tput setaf 2)
 yellow=$(tput setaf 3)
 blue=$(tput setaf 4)
 
-# Flags for replacement and checking
-replace_flag=false
-check_replace_flag=false
-
 # Function to display system information
 display_system_info() {
-    echo -e "\n$bold$underline:: System Information ::$reset"
+    echo -e "$bold$underline:: System Information ::$reset"
     # Display OS information
     echo -e "  $bold$blue- Operating System:$reset $(lsb_release -d | cut -f2)"
     # Display CPU information
@@ -32,19 +24,11 @@ display_system_info() {
     echo -e "  $bold$blue- RAM:$reset $(free -m | awk '/Mem/ {print $2 " MB"}')"
 }
 
-# Function to prompt for restart
-prompt_restart() {
-    read -p "Do you want to restart your system? (y/n): " restart_choice
-    if [[ $restart_choice == "y" || $restart_choice == "Y" ]]; then
-        echo "Restarting the system..."
-        # Add command to restart the system here
-    else
-        echo "No restart requested."
-    fi
-}
+# Display header and subheader
+echo -e "$bold$blue=== $project_name ===$reset"
+echo -e "$bold$green:: System Report ::$reset\n"
 
-# Menu options
-options=("1. Install Script" "2. Restore Initial Backup" "3. Exit")
+# ... (سایر بخش‌ها)
 
 # Display menu
 echo -e "$bold$green"
@@ -88,6 +72,8 @@ select option in "${options[@]}"; do
             ;;
     esac
 done
+
+# ... (سایر بخش‌ها)
 
 # Display replacement status in normal execution
 if $check_replace_flag; then
