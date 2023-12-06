@@ -34,36 +34,32 @@ prompt_restart() {
 # Display system info before any action
 display_system_info
 
-# Display menu using dialog
-dialog --menu "Select an option:" 10 50 3 1 "Install Script" 2 "Restore Initial Backup" 3 "Exit" 2>/tmp/menu_result
-
-# Read the result from the temporary file
-choice=$(cat /tmp/menu_result)
-
-# Process the choice
-case $choice in
-    1)
-        # Option 1: Install Script
-        cp "$backup_and_destination_path" "$backup_and_destination_path.bak"
-        echo "Downloading the new file..."
-        curl -sSfL "$new_file_url" -o "$backup_and_destination_path" --progress-bar
-        echo -e "${GREEN}File replaced, backup created.${NC}"
-        prompt_restart
-        ;;
-    2)
-        # Option 2: Restore Initial Backup
-        cp "$backup_and_destination_path.bak" "$backup_and_destination_path"
-        echo -e "${GREEN}File restored from initial backup.${NC}"
-        prompt_restart
-        ;;
-    3)
-        # Option 3: Exit
-        echo -e "${RED}Exiting.${NC}"
-        ;;
-    *)
-        echo "Invalid choice. Please select again."
-        ;;
-esac
-
-# Clean up temporary files
-rm -f /tmp/menu_result
+# Display menu
+options=("Install Script" "Restore Initial Backup" "Exit")
+PS3="Select an option: "
+select option in "${options[@]}"; do
+    case $REPLY in
+        1)
+            # Option 1: Install Script
+            cp "$backup_and_destination_path" "$backup_and_destination_path.bak"
+            echo "Downloading the new file..."
+            curl -sSfL "$new_file_url" -o "$backup_and_destination_path" --progress-bar
+            echo -e "${GREEN}File replaced, backup created.${NC}"
+            prompt_restart
+            break
+            ;;
+        2)
+            # Option 2: Restore Initial Backup
+            cp "$backup_and_destination_path.bak" "$backup_and_destination_path"
+            echo -e "${GREEN}File restored from initial backup.${NC}"
+            prompt_restart
+            break
+            ;;
+        3)
+            # Option 3: Exit
+            echo -e "${RED}Exiting.${NC}"
+            break
+            ;;
+        *) echo "Invalid choice. Please select again." ;;
+    esac
+done
