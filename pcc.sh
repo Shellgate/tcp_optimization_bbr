@@ -36,7 +36,7 @@ display_system_info
 
 # Display menu
 options=("1. Install Script" "2. Restore Initial Backup" "3. Exit")
-echo -e "Select an option:\n"
+PS3="Select an option: "
 select option in "${options[@]}"; do
     case $REPLY in
         1)
