@@ -1,18 +1,14 @@
 #!/bin/bash
 
-# Project variables
-project_name="TCP Optimization PCC"
-backup_and_destination_path="/etc/sysctl.conf"
+project="TCP Optimization PCC"
+backup_path="/etc/sysctl.conf"
 new_file_url="https://raw.githubusercontent.com/Shellgate/pcc-tcp-optimizer/main/sysctl.conf"
-
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Display system information
-display_system_info() {
-    echo -e "\n=== ${GREEN}$project_name${NC} ==="
+display_info() {
+    echo -e "\n=== ${GREEN}$project${NC} ==="
     echo -e "${RED}System Information:${NC}"
     echo -e "+------------------------+"
     echo -e "|  OS: $(lsb_release -d | cut -f2)  |"
@@ -21,7 +17,6 @@ display_system_info() {
     echo -e "+------------------------+"
 }
 
-# Prompt user for restart
 prompt_restart() {
     read -p "Restart the system? (y/n): " restart_choice
     case $restart_choice in
@@ -31,32 +26,28 @@ prompt_restart() {
     esac
 }
 
-# Display system info before any action
-display_system_info
+display_info
 
-# Display menu
 options=("Install Script" "Restore Initial Backup" "Exit")
 PS3="Select an option: "
+
 select option in "${options[@]}"; do
     case $REPLY in
         1)
-            # Option 1: Install Script
-            cp "$backup_and_destination_path" "$backup_and_destination_path.bak"
+            cp "$backup_path" "$backup_path.bak"
             echo "Downloading the new file..."
-            curl -sSfL "$new_file_url" -o "$backup_and_destination_path" --progress-bar
+            curl -sSfL "$new_file_url" -o "$backup_path" --progress-bar
             echo -e "${GREEN}File replaced, backup created.${NC}"
             prompt_restart
             break
             ;;
         2)
-            # Option 2: Restore Initial Backup
-            cp "$backup_and_destination_path.bak" "$backup_and_destination_path"
+            cp "$backup_path.bak" "$backup_path"
             echo -e "${GREEN}File restored from initial backup.${NC}"
             prompt_restart
             break
             ;;
         3)
-            # Option 3: Exit
             echo -e "${RED}Exiting.${NC}"
             break
             ;;
