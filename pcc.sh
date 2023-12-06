@@ -12,7 +12,6 @@ display_system_info() {
     echo -e "  OS: $(lsb_release -d | cut -f2)"
     echo -e "  CPU: $(grep 'model name' /proc/cpuinfo | head -n1 | cut -d' ' -f3-)"
     echo -e "  RAM: $(free -m | awk '/Mem/ {print $2 " MB"}')"
-    echo -e "====================="
 }
 
 # Prompt user for restart
