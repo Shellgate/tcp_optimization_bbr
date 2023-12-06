@@ -36,29 +36,33 @@ display_system_info
 
 # Display menu
 options=("1. Install Script" "2. Restore Initial Backup" "3. Exit")
-select option; in "${options[@]}"; do
-    case $option in
-        "1. Install Script")
-            # Option 1: Install Script
-            cp "$backup_and_destination_path" "$backup_and_destination_path.bak"
-            echo "Downloading the new file..."
-            curl -sSfL "$new_file_url" -o "$backup_and_destination_path" --progress-bar
-            echo -e "${GREEN}File replaced, backup created.${NC}"
-            prompt_restart
-            break
-            ;;
-        "2. Restore Initial Backup")
-            # Option 2: Restore Initial Backup
-            cp "$backup_and_destination_path.bak" "$backup_and_destination_path"
-            echo -e "${GREEN}File restored from initial backup.${NC}"
-            prompt_restart
-            break
-            ;;
-        "3. Exit")
-            # Option 3: Exit
-            echo -e "${RED}Exiting.${NC}"
-            break
-            ;;
-        *) echo "Invalid choice. Please select again." ;;
-    esac
+
+printf "Select an option:\n"
+for i in "${!options[@]}"; do
+    printf "%d) %s\n" "$((i+1))" "${options[$i]}"
 done
+
+read -p "#? " choice
+case $choice in
+    1)
+        # Option 1: Install Script
+        cp "$backup_and_destination_path" "$backup_and_destination_path.bak"
+        echo "Downloading the new file..."
+        curl -sSfL "$new_file_url" -o "$backup_and_destination_path" --progress-bar
+        echo -e "${GREEN}File replaced, backup created.${NC}"
+        prompt_restart
+        ;;
+    2)
+        # Option 2: Restore Initial Backup
+        cp "$backup_and_destination_path.bak" "$backup_and_destination_path"
+        echo -e "${GREEN}File restored from initial backup.${NC}"
+        prompt_restart
+        ;;
+    3)
+        # Option 3: Exit
+        echo -e "${RED}Exiting.${NC}"
+        ;;
+    *)
+        echo "Invalid choice. Please select again."
+        ;;
+esac
