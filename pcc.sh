@@ -36,10 +36,9 @@ display_system_info
 
 # Display menu
 options=("1. Install Script" "2. Restore Initial Backup" "3. Exit")
-PS3="Select an option: "
-select option in "${options[@]}"; do
-    case $REPLY in
-        1)
+select option; in "${options[@]}"; do
+    case $option in
+        "1. Install Script")
             # Option 1: Install Script
             cp "$backup_and_destination_path" "$backup_and_destination_path.bak"
             echo "Downloading the new file..."
@@ -48,14 +47,14 @@ select option in "${options[@]}"; do
             prompt_restart
             break
             ;;
-        2)
+        "2. Restore Initial Backup")
             # Option 2: Restore Initial Backup
             cp "$backup_and_destination_path.bak" "$backup_and_destination_path"
             echo -e "${GREEN}File restored from initial backup.${NC}"
             prompt_restart
             break
             ;;
-        3)
+        "3. Exit")
             # Option 3: Exit
             echo -e "${RED}Exiting.${NC}"
             break
