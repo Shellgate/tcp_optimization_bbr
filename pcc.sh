@@ -34,15 +34,13 @@ prompt_restart() {
 # Display system info before any action
 display_system_info
 
-# Display menu
-options=("1. Install Script" "2. Restore Initial Backup" "3. Exit")
+# Display menu using dialog
+dialog --menu "Select an option:" 10 50 3 1 "Install Script" 2 "Restore Initial Backup" 3 "Exit" 2>/tmp/menu_result
 
-printf "Select an option:\n"
-for i in "${!options[@]}"; do
-    printf "%d) %s\n" "$((i+1))" "${options[$i]}"
-done
+# Read the result from the temporary file
+choice=$(cat /tmp/menu_result)
 
-read -p "#? " choice
+# Process the choice
 case $choice in
     1)
         # Option 1: Install Script
@@ -66,3 +64,6 @@ case $choice in
         echo "Invalid choice. Please select again."
         ;;
 esac
+
+# Clean up temporary files
+rm -f /tmp/menu_result
