@@ -1,7 +1,8 @@
 # tcp-optimizer-bbr
 A script improvement system network
 
-https://github.com/Shellgate/tcp_optimization_bbr/assets/128194280/a65cedcb-9a38-4b3e-a2e5-e6603bc5a919
+![IMG_۲۰۲۴۰۱۰۷_۰۲۰۵۵۵](https://github.com/Shellgate/tcp_optimization_bbr/assets/128194280/3b9f8882-0511-4f12-a2d3-3a57f30abdd4)
+
 
 ## Install & Upgrade to latest Version
 
