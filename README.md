@@ -7,5 +7,5 @@ A script improvement system network
 ## Install & Upgrade to latest Version
 
 ```sh
-bash <(curl -Ls https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/pcc.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/bbr.sh)
 ```
