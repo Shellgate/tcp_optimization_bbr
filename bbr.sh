@@ -1,8 +1,8 @@
 #!/bin/bash
 
-project="TCP Optimization PCC"
+project="TCP Optimization BBR"
 backup_path="/etc/sysctl.conf"
-new_file_url="https://raw.githubusercontent.com/Shellgate/tcp_optimization_pcc/main/sysctl.conf"
+new_file_url="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
