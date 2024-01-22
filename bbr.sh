@@ -7,6 +7,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
+# Function to display system information
 display_info() {
     echo -e "\n=== ${GREEN}$project${NC} ==="
     echo -e "${RED}System Information:${NC}"
@@ -17,6 +18,7 @@ display_info() {
     echo -e "+------------------------+"
 }
 
+# Function to prompt for system restart
 prompt_restart() {
     read -p "Restart the system? (y/n): " restart_choice
     case $restart_choice in
@@ -38,12 +40,14 @@ select option in "${options[@]}"; do
             echo "Downloading the new file..."
             curl -sSfL "$new_file_url" -o "$backup_path" --progress-bar
             echo -e "${GREEN}File replaced, backup created.${NC}"
+            sysctl -p  # Apply changes
             prompt_restart
             break
             ;;
         2)
             cp "$backup_path.bak" "$backup_path"
             echo -e "${GREEN}File restored from initial backup.${NC}"
+            sysctl -p  # Apply changes
             prompt_restart
             break
             ;;
