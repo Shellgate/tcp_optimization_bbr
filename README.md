@@ -9,3 +9,5 @@ A script improvement system network
 ```sh
 bash <(curl -Ls https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/bbr.sh)
 ```
+
+This configuration file for /etc/sysctl.conf applies advanced TCP and kernel tuning parameters aimed at optimizing network performance, particularly for high-throughput and low-latency environments.
