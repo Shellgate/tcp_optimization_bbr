@@ -46,7 +46,7 @@ Windows Registry Editor Version 5.00
 ; ===========================
 
 ; Enable Thumbnail Previews in File Explorer
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
 "IconsOnly"=dword:00000000
 
 ; Enable File Editing in File Explorer
@@ -58,12 +58,17 @@ Windows Registry Editor Version 5.00
 @="{1d27f844-3a1f-4410-85ac-14651078412d}"
 
 ; Enable Detailed File Information
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
 "HideFileExt"=dword:00000000
 
 ; Enable Show Hidden Files
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
 "Hidden"=dword:00000001
+"ShowSuperHidden"=dword:00000001
+
+; Enable Quick Access Customization
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer]
+"HubMode"=dword:00000001
 
 ; ===========================
 ; Network Optimization
@@ -87,7 +92,7 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection]
 "AllowTelemetry"=dword:00000000
 
-; Disable OneDrive
+; Disable OneDrive Integration
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\OneDrive]
 "DisableFileSyncNGSC"=dword:00000001
 
@@ -102,3 +107,24 @@ Windows Registry Editor Version 5.00
 ; Disable Unnecessary Visual Effects
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects]
 "VisualFXSetting"=dword:00000002
+
+; Disable Background Apps
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications]
+"Disabled"=dword:00000001
+"DisabledByUser"=dword:00000001
+
+; ===========================
+; Additional Tweaks
+; ===========================
+
+; Disable Hibernate
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power]
+"HibernateEnabled"=dword:00000000
+
+; Disable USB Selective Suspend
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\USB]
+"SelectiveSuspendEnabled"=dword:00000000
+
+; Disable Fast Startup (if needed)
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Power]
+"HiberbootEnabled"=dword:00000000
