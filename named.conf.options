@@ -1,0 +1,44 @@
+options {
+    directory "/var/cache/bind";
+    dnssec-validation auto;
+    forwarders {
+        1.1.1.1;
+        1.0.0.1;
+        9.9.9.9;
+        149.112.112.112;
+    };
+    forward only;
+    allow-query { localhost; 192.168.0.0/16; };
+    allow-recursion { localhost; 192.168.0.0/16; };
+    allow-transfer { none; };
+    max-cache-size 512M;
+    max-cache-ttl 86400;
+    recursion yes;
+    listen-on { any; };
+    listen-on-v6 { any; };
+    version none;
+    auth-nxdomain no;
+    minimal-responses yes;
+    rate-limit {
+        responses-per-second 10;
+        window 5;
+    };
+    tcp-clients 100;
+    udp-receive-buffer 1048576;
+    udp-send-buffer 1048576;
+    reserved-sockets 500;
+    stacksize default;
+    datasize default;
+    max-udp-size 4096;
+    edns-udp-size 1232;
+    notify-rate 20;
+    serial-query-rate 20;
+    transfers-in 10;
+    transfers-out 10;
+    clients-per-query 10;
+    max-clients-per-query 100;
+    lame-ttl 300;
+    tcp-idle-timeout 30;
+    tcp-initial-timeout 30;
+    tcp-keepalive-timeout 30;
+};
