@@ -12,7 +12,7 @@ options {
     allow-recursion { localhost; 192.168.0.0/16; };
     allow-transfer { none; };
     max-cache-size 4M;
-    max-cache-ttl 60;
+    max-cache-ttl 3600;
     recursion yes;
     listen-on { any; };
     listen-on-v6 { any; };
