@@ -11,8 +11,8 @@ options {
     allow-query { localhost; 192.168.0.0/16; };
     allow-recursion { localhost; 192.168.0.0/16; };
     allow-transfer { none; };
-    max-cache-size 32M;
-    max-cache-ttl 300;
+    max-cache-size 4M;
+    max-cache-ttl 60;
     recursion yes;
     listen-on { any; };
     listen-on-v6 { any; };
@@ -20,8 +20,8 @@ options {
     auth-nxdomain no;
     minimal-responses yes;
     rate-limit {
-        responses-per-second 20;
-        window 10;
+        responses-per-second 10;
+        window 5;
     };
     tcp-clients 100;
     udp-receive-buffer 1048576;
