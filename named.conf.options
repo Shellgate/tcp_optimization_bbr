@@ -11,7 +11,7 @@ options {
     allow-query { localhost; 192.168.0.0/16; };
     allow-recursion { localhost; 192.168.0.0/16; };
     allow-transfer { none; };
-    max-cache-size 4M;
+    max-cache-size 8M;
     max-cache-ttl 3600;
     recursion yes;
     listen-on { any; };
