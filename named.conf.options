@@ -20,8 +20,8 @@ options {
     max-clients-per-query 600;
     udp-receive-buffer 2097152;
     udp-send-buffer 2097152;
-    max-udp-size 4096;
-    edns-udp-size 4096;
+    max-udp-size 1232;
+    edns-udp-size 1232;
     tcp-idle-timeout 10;
     tcp-initial-timeout 5;
     tcp-keepalive-timeout 5;
