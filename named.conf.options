@@ -2,17 +2,15 @@ options {
     directory "/var/cache/bind";
     dnssec-validation auto;
     forwarders {
-        1.1.1.1;
-        1.0.0.1;
-        9.9.9.9;
+        9.9.9.11;
         149.112.112.112;   
     };
     forward first;
     allow-query { localhost; 192.168.0.0/16; };
     allow-recursion { localhost; 192.168.0.0/16; };
     allow-transfer { none; };
-    max-cache-size 8M;
-    max-cache-ttl 3600;
+    max-cache-size 16M;
+    max-cache-ttl 7200;
     recursion yes;
     listen-on { any; };
     listen-on-v6 { any; };
