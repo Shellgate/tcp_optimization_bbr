@@ -3,7 +3,7 @@ options {
     dnssec-validation auto;
     forwarders {
         9.9.9.11;
-        149.112.112.112;   
+        149.112.112.11;   
     };
     forward first;
     allow-query { localhost; 192.168.0.0/16; };
