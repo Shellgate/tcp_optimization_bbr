@@ -16,8 +16,8 @@ options {
     max-ncache-ttl 3600;
     minimal-responses yes;
     tcp-clients 1500;
-    clients-per-query 50;
-    max-clients-per-query 200;
+    clients-per-query 100;
+    max-clients-per-query 300;
     udp-receive-buffer 4194304;
     udp-send-buffer 4194304;
     max-udp-size 1232;
@@ -28,7 +28,7 @@ options {
     reserved-sockets 1500;
     stacksize default;
     datasize default;
-    rate-limit { responses-per-second 50; window 2; };
+    rate-limit { responses-per-second 100; window 2; };
     notify-rate 10;
     serial-query-rate 10;
     transfers-in 5;
