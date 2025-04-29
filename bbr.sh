@@ -136,6 +136,18 @@ show_diff() {
     fi
 }
 
+prompt_reboot() {
+    while true; do
+        echo -ne "${MAGENTA}${BOLD}↻ Reboot now for all changes to take effect? (y/n): ${RESET}"
+        read -r reboot_choice
+        case "$reboot_choice" in
+            [Yy]) reboot ;;
+            [Nn]) break ;;
+            *) echo -e "${YELLOW}Please enter y or n.${RESET}" ;;
+        esac
+    done
+}
+
 apply_update() {
     cp "$CONFIG_FILE" "$BACKUP_FILE"
     cp "$TEMP_DOWNLOAD" "$CONFIG_FILE"
@@ -149,6 +161,7 @@ apply_update() {
         echo -e "${YELLOW}sysctl output:${RESET}\n$sysctl_out"
         echo -e "${RED}Check your sysctl.conf for mistakes, especially lines shown above.${RESET}"
     fi
+    prompt_reboot
 }
 
 restore_backup() {
@@ -164,15 +177,10 @@ restore_backup() {
             echo -e "${YELLOW}sysctl output:${RESET}\n$sysctl_out"
             echo -e "${RED}Check your sysctl.conf for mistakes, especially lines shown above.${RESET}"
         fi
+        prompt_reboot
     else
         echo -e "${RED}✖ No backup found to restore!${RESET}"
     fi
-}
-
-prompt_reboot() {
-    echo -ne "${MAGENTA}${BOLD}↻ Reboot now for all changes to take effect? (y/n): ${RESET}"
-    read -r reboot_choice
-    [[ "$reboot_choice" =~ ^[Yy]$ ]] && reboot
 }
 
 show_menu() {
@@ -202,7 +210,6 @@ while true; do
                 read -r apply_choice
                 if [[ "$apply_choice" =~ ^[Yy]$ ]]; then
                     apply_update
-                    prompt_reboot
                 else
                     echo -e "${YELLOW}✱ Update cancelled.${RESET}"
                 fi
@@ -211,7 +218,6 @@ while true; do
             ;;
         2)
             restore_backup
-            prompt_reboot
             echo -e "${DIM}Press ENTER to return to the menu...${RESET}"; read -r
             ;;
         3)
