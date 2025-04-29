@@ -109,7 +109,22 @@ show_diff() {
         diff_output=$(diff -u "$CONFIG_FILE" "$TEMP_DOWNLOAD" || true)
         if [[ -n "$diff_output" ]]; then
             echo -e "${YELLOW}${BOLD}Configuration Changes:${RESET}"
-            echo -e "${CYAN}$diff_output${RESET}"
+            while IFS= read -r line; do
+                case "$line" in
+                    ---*|+++*|@@*)
+                        echo -e "${BLUE}$line${RESET}"
+                        ;;
+                    -*)
+                        echo -e "${RED}$line${RESET}"
+                        ;;
+                    +*)
+                        echo -e "${GREEN}$line${RESET}"
+                        ;;
+                    *)
+                        echo "$line"
+                        ;;
+                esac
+            done <<< "$diff_output"
             return 0
         else
             echo -e "${GREEN}✔ You already have the latest optimized configuration.${RESET}"
@@ -125,10 +140,14 @@ apply_update() {
     cp "$CONFIG_FILE" "$BACKUP_FILE"
     cp "$TEMP_DOWNLOAD" "$CONFIG_FILE"
     echo -e "${GREEN}✔ Updated! Backup saved at: ${BOLD}$BACKUP_FILE${RESET}"
-    if sysctl -p; then
+    sysctl_out=$(sysctl -p 2>&1)
+    sysctl_ret=$?
+    if [[ $sysctl_ret -eq 0 ]]; then
         echo -e "${GREEN}✔ sysctl settings applied.${RESET}"
     else
-        echo -e "${RED}✖ Warning: sysctl -p failed. Please check your config.${RESET}"
+        echo -e "${RED}✖ Warning: sysctl -p failed!${RESET}"
+        echo -e "${YELLOW}sysctl output:${RESET}\n$sysctl_out"
+        echo -e "${RED}Check your sysctl.conf for mistakes, especially lines shown above.${RESET}"
     fi
 }
 
@@ -136,10 +155,14 @@ restore_backup() {
     if [[ -f "$BACKUP_FILE" ]]; then
         cp "$BACKUP_FILE" "$CONFIG_FILE"
         echo -e "${GREEN}✔ Restored from backup: ${BOLD}$BACKUP_FILE${RESET}"
-        if sysctl -p; then
+        sysctl_out=$(sysctl -p 2>&1)
+        sysctl_ret=$?
+        if [[ $sysctl_ret -eq 0 ]]; then
             echo -e "${GREEN}✔ sysctl settings applied after restore.${RESET}"
         else
             echo -e "${RED}✖ Warning: sysctl -p failed after restore!${RESET}"
+            echo -e "${YELLOW}sysctl output:${RESET}\n$sysctl_out"
+            echo -e "${RED}Check your sysctl.conf for mistakes, especially lines shown above.${RESET}"
         fi
     else
         echo -e "${RED}✖ No backup found to restore!${RESET}"
