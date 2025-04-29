@@ -1,10 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# ==========================================
-#         TCP Optimization Manager
-# ==========================================
-# 
 # --------- CONFIGURATION ---------
 CONFIG_FILE="/etc/sysctl.conf"
 BACKUP_DIR="/etc/sysctl_backups"
@@ -42,7 +38,6 @@ ensure_backup_dir() {
 }
 
 show_system_info() {
-    # OS
     if command -v lsb_release >/dev/null 2>&1; then
         os_name=$(lsb_release -d 2>/dev/null | cut -f2)
     elif [[ -f /etc/os-release ]]; then
@@ -50,19 +45,16 @@ show_system_info() {
     else
         os_name="N/A"
     fi
-    # CPU
     if grep -q 'model name' /proc/cpuinfo 2>/dev/null; then
         cpu_name=$(grep 'model name' /proc/cpuinfo | head -n1 | cut -d' ' -f3-)
     else
         cpu_name="N/A"
     fi
-    # RAM
     if command -v free >/dev/null 2>&1; then
         ram_mb=$(free -m | awk '/^Mem:/ {printf "%.0f GB", $2/1024}')
     else
         ram_mb="N/A"
     fi
-    # Disk Size (Total GB)
     if command -v lsblk >/dev/null 2>&1; then
         disk_gb=$(lsblk -bdo SIZE,TYPE | awk '$2=="disk"{sum+=$1} END{printf "%.0f GB", sum/1024/1024/1024}')
     else
@@ -85,7 +77,6 @@ check_internet() {
 }
 
 download_file() {
-    # Always get the latest directly from GitHub
     if ! curl -sfL "$NEW_FILE_URL" -o "$TEMP_DOWNLOAD" -H "Cache-Control: no-cache"; then
         echo -e "${RED}✖ Failed to download the new config!${RESET}"
         exit 1
@@ -103,18 +94,10 @@ show_diff() {
             echo -e "${YELLOW}${BOLD}Configuration Changes:${RESET}"
             while IFS= read -r line; do
                 case "$line" in
-                    ---*|+++*|@@*)
-                        echo -e "${BLUE}$line${RESET}"
-                        ;;
-                    -*)
-                        echo -e "${RED}$line${RESET}"
-                        ;;
-                    +*)
-                        echo -e "${GREEN}$line${RESET}"
-                        ;;
-                    *)
-                        echo "$line"
-                        ;;
+                    ---*|+++*|@@*) echo -e "${BLUE}$line${RESET}" ;;
+                    -*) echo -e "${RED}$line${RESET}" ;;
+                    +*) echo -e "${GREEN}$line${RESET}" ;;
+                    *) echo "$line" ;;
                 esac
             done <<< "$diff_output"
             return 0
@@ -126,18 +109,6 @@ show_diff() {
         echo -e "${YELLOW}⚠ diff not found. Cannot show changes.${RESET}"
         return 2
     fi
-}
-
-prompt_reboot() {
-    while true; do
-        echo -ne "${MAGENTA}${BOLD}↻ Reboot now for all changes to take effect? (y/n): ${RESET}"
-        read -r reboot_choice
-        case "$reboot_choice" in
-            [Yy]) reboot ;;
-            [Nn]) break ;;
-            *) echo -e "${YELLOW}Please enter y or n.${RESET}" ;;
-        esac
-    done
 }
 
 apply_update() {
@@ -173,6 +144,15 @@ restore_backup() {
     fi
 }
 
+ask_reboot() {
+    echo
+    echo -ne "${MAGENTA}${BOLD}↻ Do you want to reboot now? (y/n): ${RESET}"
+    read -r reboot_choice
+    if [[ "$reboot_choice" =~ ^[Yy]$ ]]; then
+        reboot
+    fi
+}
+
 show_menu() {
     clear
     echo -e "${BG}${WHITE}${BOLD}         TCP Optimization Manager         ${RESET}\n"
@@ -203,12 +183,12 @@ while true; do
             else
                 echo -e "${YELLOW}✱ Update cancelled.${RESET}"
             fi
-            prompt_reboot
+            ask_reboot
             echo -e "${DIM}Press ENTER to return to the menu...${RESET}"; read -r
             ;;
         2)
             restore_backup
-            prompt_reboot
+            ask_reboot
             echo -e "${DIM}Press ENTER to return to the menu...${RESET}"; read -r
             ;;
         3)
