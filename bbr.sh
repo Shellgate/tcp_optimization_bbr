@@ -1,23 +1,25 @@
 #!/bin/bash
 set -euo pipefail
 
-# ================================
-#   TCP Optimization Manager
-# ================================
-# 1) Update & Optimize: Download & apply latest optimized sysctl.conf (with backup & diff)
-# 2) Restore Backup: Restore previous config from backup
+# ==========================================
+#         TCP Optimization Manager
+# ==========================================
+# 1) Update & Optimize: Download & apply the latest optimized sysctl.conf
+#    - Shows server info and config differences before applying.
+#    - Creates a backup before any change.
+# 2) Restore Backup: Restore previous sysctl.conf from backup.
 # 3) Exit
-# After update/restore, you can choose to reboot for all changes to take effect.
-# ================================
+# - After update or restore, you can choose to reboot for full effect.
+# ==========================================
 
-# ---- SETTINGS ----
+# --------- CONFIGURATION ---------
 CONFIG_FILE="/etc/sysctl.conf"
 BACKUP_DIR="/etc/sysctl_backups"
 BACKUP_FILE="${BACKUP_DIR}/sysctl.conf.latest"
 NEW_FILE_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf"
 TEMP_DOWNLOAD="$(mktemp /tmp/sysctl_new.XXXXXX)"
 
-# ---- COLORS ----
+# --------- MODERN COLORS ---------
 RESET='\033[0m'
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -28,22 +30,51 @@ BLUE='\033[1;34m'
 CYAN='\033[1;36m'
 MAGENTA='\033[1;35m'
 WHITE='\033[1;37m'
-BG="\033[48;5;236m" # Soft background
+BG="\033[48;5;238m"
 
-# ---- CLEANUP ----
+# --------- CLEANUP ---------
 cleanup() {
     rm -f "$TEMP_DOWNLOAD"
 }
 trap cleanup EXIT
 
-# ---- FUNCTIONS ----
+# --------- FUNCTIONS ---------
 
 require_root() {
-    [[ $EUID -eq 0 ]] || { echo -e "${RED}✖ This script must be run as root.${RESET}"; exit 1; }
+    [[ $EUID -eq 0 ]] || { echo -e "${RED}${BOLD}✖ This script must be run as root.${RESET}"; exit 1; }
 }
 
 ensure_backup_dir() {
     [[ -d "$BACKUP_DIR" ]] || mkdir -p "$BACKUP_DIR"
+}
+
+show_system_info() {
+    echo -e "${BLUE}${BOLD}Server Information:${RESET}"
+    # OS
+    if command -v lsb_release >/dev/null 2>&1; then
+        os_name=$(lsb_release -d 2>/dev/null | cut -f2)
+    elif [[ -f /etc/os-release ]]; then
+        os_name=$(awk -F= '/^PRETTY_NAME/{print $2}' /etc/os-release | tr -d '"')
+    else
+        os_name="N/A"
+    fi
+    # CPU
+    if grep -q 'model name' /proc/cpuinfo 2>/dev/null; then
+        cpu_name=$(grep 'model name' /proc/cpuinfo | head -n1 | cut -d' ' -f3-)
+    else
+        cpu_name="N/A"
+    fi
+    # RAM
+    if command -v free >/dev/null 2>&1; then
+        ram_mb=$(free -m | awk '/^Mem:/ {print $2 " MB"}')
+    else
+        ram_mb="N/A"
+    fi
+    echo -e "${WHITE}┌──────────────────────────────────────────┐${RESET}"
+    printf "${WHITE}│ %-12s: %-26s │\n" "OS" "$os_name"
+    printf "${WHITE}│ %-12s: %-26s │\n" "CPU" "$cpu_name"
+    printf "${WHITE}│ %-12s: %-26s │\n" "RAM" "$ram_mb"
+    echo -e "${WHITE}└──────────────────────────────────────────┘${RESET}"
 }
 
 check_internet() {
@@ -68,7 +99,7 @@ show_diff() {
     if command -v diff >/dev/null 2>&1; then
         diff_output=$(diff -u "$CONFIG_FILE" "$TEMP_DOWNLOAD" || true)
         if [[ -n "$diff_output" ]]; then
-            echo -e "${YELLOW}${BOLD}▲ Changes detected:${RESET}"
+            echo -e "${YELLOW}${BOLD}▲ Configuration Changes:${RESET}"
             echo -e "${CYAN}$diff_output${RESET}"
             return 0
         else
@@ -107,26 +138,28 @@ restore_backup() {
 }
 
 prompt_reboot() {
-    echo -ne "${MAGENTA}${BOLD}↻ Do you want to reboot now for all changes to take effect? (y/n): ${RESET}"
+    echo -ne "${MAGENTA}${BOLD}↻ Reboot now for all changes to take effect? (y/n): ${RESET}"
     read -r reboot_choice
     [[ "$reboot_choice" =~ ^[Yy]$ ]] && reboot
 }
 
 show_menu() {
     clear
-    echo -e "${BG}${WHITE}${BOLD}   TCP Optimization Manager   ${RESET}\n"
+    echo -e "${BG}${WHITE}${BOLD}         TCP Optimization Manager         ${RESET}\n"
     echo -e "${CYAN}1) ${WHITE}Update & Optimize (Recommended)"
     echo -e "${CYAN}2) ${WHITE}Restore Backup"
     echo -e "${CYAN}3) ${WHITE}Exit${RESET}"
 }
 
-# ---- MAIN ----
-
+# -------------- MAIN --------------
 require_root
 ensure_backup_dir
 
 while true; do
     show_menu
+    echo
+    show_system_info
+    echo
     echo -ne "${BOLD}Select an option [1-3]: ${RESET}"
     read -r choice
     case "$choice" in
