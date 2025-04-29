@@ -16,9 +16,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[1;34m'
 NC='\033[0m'
 
-trap 'rm -f "$temp_download" "$lock_file"' EXIT
+cleanup() {
+    rm -f "$temp_download" "$lock_file"
+}
+trap cleanup EXIT
 
-# Function: Check if running as root
+# Check root
 require_root() {
     if [[ $EUID -ne 0 ]]; then
         echo -e "${RED}This script must be run as root. Exiting.${NC}" >&2
@@ -26,12 +29,12 @@ require_root() {
     fi
 }
 
-# Function: Create backup directory if not exists
+# Make backup dir if not exists
 ensure_backup_dir() {
     [[ -d "$backup_dir" ]] || mkdir -p "$backup_dir"
 }
 
-# Function: Prevent multiple script instances
+# Prevent concurrent runs
 lock_script() {
     if [[ -f "$lock_file" ]]; then
         echo -e "${YELLOW}Another update is in progress. Try again later.${NC}"
@@ -40,18 +43,38 @@ lock_script() {
     touch "$lock_file"
 }
 
-# Function: Show system information
+# Show system info (robust & compatible)
 display_info() {
     echo -e "\n${BLUE}=== $project ===${NC}"
     echo -e "${YELLOW}System Information:${NC}"
     echo -e "+------------------------+"
-    echo -e "|  OS: $(lsb_release -d 2>/dev/null | cut -f2 || echo N/A)  |"
-    echo -e "|  CPU: $(grep 'model name' /proc/cpuinfo | head -n1 | cut -d' ' -f3- || echo N/A)  |"
-    echo -e "|  RAM: $(free -m | awk '/Mem/ {print $2 \" MB\"}')  |"
+    # OS
+    if command -v lsb_release >/dev/null 2>&1; then
+        os_name=$(lsb_release -d 2>/dev/null | cut -f2)
+    elif [[ -f /etc/os-release ]]; then
+        os_name=$(awk -F= '/^PRETTY_NAME/{print $2}' /etc/os-release | tr -d '"')
+    else
+        os_name="N/A"
+    fi
+    echo -e "|  OS: ${os_name:-N/A}  |"
+    # CPU
+    if grep -q 'model name' /proc/cpuinfo 2>/dev/null; then
+        cpu_name=$(grep 'model name' /proc/cpuinfo | head -n1 | cut -d' ' -f3-)
+    else
+        cpu_name="N/A"
+    fi
+    echo -e "|  CPU: ${cpu_name:-N/A}  |"
+    # RAM
+    if command -v free >/dev/null 2>&1; then
+        ram_mb=$(free -m | awk '/^Mem:/ {print $2 " MB"}')
+    else
+        ram_mb="N/A"
+    fi
+    echo -e "|  RAM: ${ram_mb:-N/A}  |"
     echo -e "+------------------------+"
 }
 
-# Function: Check for internet connectivity
+# Check internet
 check_internet() {
     if ! curl -s --head https://raw.githubusercontent.com/ >/dev/null; then
         echo -e "${RED}Error: No internet connection!${NC}"
@@ -59,7 +82,7 @@ check_internet() {
     fi
 }
 
-# Function: Download the latest config file (no cache)
+# Download latest config (no cache)
 download_file() {
     if ! curl -sfL "$new_file_url" -o "$temp_download" -H "Cache-Control: no-cache"; then
         echo -e "${RED}Error: Failed to download the new file!${NC}"
@@ -71,28 +94,30 @@ download_file() {
     fi
 }
 
-# Function: Backup current config with timestamp and update 'latest'
+# Backup current config with timestamp and update 'latest'
 backup_current() {
     cp "$config_file" "$backup_file"
     cp "$config_file" "$latest_backup"
     echo -e "${GREEN}Backup created: $backup_file${NC}"
 }
 
-# Function: List available backups
+# List available backups
 list_backups() {
     echo -e "${YELLOW}Available backups:${NC}"
-    ls -1 "$backup_dir"/sysctl.conf.* | xargs -n 1 basename
+    ls -1 "$backup_dir"/sysctl.conf.* 2>/dev/null | xargs -n 1 basename || echo "No backups found."
 }
 
-# Function: Show diff between current and new config
+# Show diff (with fallback)
 show_diff() {
     if command -v diff &>/dev/null; then
         echo -e "${YELLOW}Diff between current and new version:${NC}"
         diff -u "$config_file" "$temp_download" || echo -e "${BLUE}No changes found.${NC}"
+    else
+        echo -e "${YELLOW}diff command not found, can't show difference.${NC}"
     fi
 }
 
-# Function: Apply the new config file
+# Apply the new config file
 apply_update() {
     cp "$temp_download" "$config_file"
     echo -e "${GREEN}File replaced successfully.${NC}"
@@ -103,7 +128,7 @@ apply_update() {
     fi
 }
 
-# Function: Restore from a selected backup
+# Restore from a selected backup
 restore_backup() {
     list_backups
     read -p "Enter the backup filename to restore: " restore_file
@@ -115,7 +140,7 @@ restore_backup() {
     fi
 }
 
-# Function: Ask for system restart
+# Ask for system restart
 prompt_restart() {
     read -p "Restart the system? (y/n): " restart_choice
     case $restart_choice in
@@ -124,13 +149,7 @@ prompt_restart() {
     esac
 }
 
-# Function: Clean up temp file and lock
-clean_exit() {
-    rm -f "$temp_download" "$lock_file"
-    exit
-}
-
-# Main program
+# -- MAIN --
 require_root
 lock_script
 ensure_backup_dir
@@ -153,25 +172,25 @@ select opt in "${options[@]}"; do
             else
                 echo -e "${YELLOW}No changes applied.${NC}"
             fi
-            clean_exit
+            exit 0
             ;;
         2)
             check_internet
             download_file
             show_diff
-            clean_exit
+            exit 0
             ;;
         3)
             restore_backup
             prompt_restart
-            clean_exit
+            exit 0
             ;;
         4)
             list_backups
             ;;
         5)
             echo -e "${RED}Exited.${NC}"
-            clean_exit
+            exit 0
             ;;
         *)
             echo -e "${RED}Invalid option!${NC}" ;;
