@@ -6,6 +6,7 @@ set -euo pipefail
 # ==========================================
 # 1) Update & Optimize: Download & apply the latest optimized sysctl.conf
 #    - Shows server info and config differences before applying.
+#    - Always fetches the latest version directly from GitHub.
 #    - Creates a backup before any change.
 # 2) Restore Backup: Restore previous sysctl.conf from backup.
 # 3) Exit
@@ -70,11 +71,45 @@ show_system_info() {
     else
         ram_mb="N/A"
     fi
-    echo -e "${WHITE}┌──────────────────────────────────────────┐${RESET}"
-    printf "${WHITE}│ %-12s: %-26s │\n" "OS" "$os_name"
-    printf "${WHITE}│ %-12s: %-26s │\n" "CPU" "$cpu_name"
-    printf "${WHITE}│ %-12s: %-26s │\n" "RAM" "$ram_mb"
-    echo -e "${WHITE}└──────────────────────────────────────────┘${RESET}"
+    # Disk Size (Total GB)
+    if command -v lsblk >/dev/null 2>&1; then
+        disk_gb=$(lsblk -bdo SIZE,TYPE | awk '$2=="disk"{sum+=$1} END{printf "%.2f GB", sum/1024/1024/1024}')
+    else
+        disk_gb="N/A"
+    fi
+    # Network Card Speed (show highest detected, e.g. 10G, 1G)
+    nic_speed="N/A"
+    if command -v ethtool >/dev/null 2>&1; then
+        for intf in $(ls /sys/class/net | grep -v lo); do
+            if ethtool "$intf" 2>/dev/null | grep -q "Speed:"; then
+                speed=$(ethtool "$intf" 2>/dev/null | awk -F ': ' '/Speed:/{print $2}')
+                if [[ "$speed" == *"10000Mb"* ]]; then
+                    nic_speed="10G"
+                    break
+                elif [[ "$speed" == *"25000Mb"* ]]; then
+                    nic_speed="25G"
+                    break
+                elif [[ "$speed" == *"40000Mb"* ]]; then
+                    nic_speed="40G"
+                    break
+                elif [[ "$speed" == *"100000Mb"* ]]; then
+                    nic_speed="100G"
+                    break
+                elif [[ "$speed" == *"1000Mb"* ]]; then
+                    nic_speed="1G"
+                elif [[ "$speed" == *"100Mb"* && "$nic_speed" == "N/A" ]]; then
+                    nic_speed="100M"
+                fi
+            fi
+        done
+    fi
+    echo -e "${WHITE}┌───────────────────────────────────────────────┐${RESET}"
+    printf "${WHITE}│ %-12s: %-30s │\n" "OS" "$os_name"
+    printf "${WHITE}│ %-12s: %-30s │\n" "CPU" "$cpu_name"
+    printf "${WHITE}│ %-12s: %-30s │\n" "RAM" "$ram_mb"
+    printf "${WHITE}│ %-12s: %-30s │\n" "Disk" "$disk_gb"
+    printf "${WHITE}│ %-12s: %-30s │\n" "NIC" "$nic_speed"
+    echo -e "${WHITE}└───────────────────────────────────────────────┘${RESET}\n"
 }
 
 check_internet() {
@@ -85,6 +120,7 @@ check_internet() {
 }
 
 download_file() {
+    # Always get the latest directly from GitHub
     if ! curl -sfL "$NEW_FILE_URL" -o "$TEMP_DOWNLOAD" -H "Cache-Control: no-cache"; then
         echo -e "${RED}✖ Failed to download the new config!${RESET}"
         exit 1
@@ -146,6 +182,7 @@ prompt_reboot() {
 show_menu() {
     clear
     echo -e "${BG}${WHITE}${BOLD}         TCP Optimization Manager         ${RESET}\n"
+    show_system_info
     echo -e "${CYAN}1) ${WHITE}Update & Optimize (Recommended)"
     echo -e "${CYAN}2) ${WHITE}Restore Backup"
     echo -e "${CYAN}3) ${WHITE}Exit${RESET}"
@@ -157,8 +194,6 @@ ensure_backup_dir
 
 while true; do
     show_menu
-    echo
-    show_system_info
     echo
     echo -ne "${BOLD}Select an option [1-3]: ${RESET}"
     read -r choice
