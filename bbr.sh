@@ -6,7 +6,6 @@ CONFIG_FILE="/etc/sysctl.conf"
 BACKUP_DIR="/etc/sysctl_backups"
 BACKUP_FILE="${BACKUP_DIR}/sysctl.conf.latest"
 NEW_FILE_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf"
-TEMP_DOWNLOAD="$(mktemp /tmp/sysctl_new.XXXXXX)"
 
 # --------- MODERN COLORS ---------
 RESET='\033[0m'
@@ -20,12 +19,6 @@ CYAN='\033[1;36m'
 MAGENTA='\033[1;35m'
 WHITE='\033[1;37m'
 BG="\033[48;5;238m"
-
-# --------- CLEANUP ---------
-cleanup() {
-    rm -f "$TEMP_DOWNLOAD"
-}
-trap cleanup EXIT
 
 # --------- FUNCTIONS ---------
 
@@ -77,7 +70,8 @@ check_internet() {
 }
 
 download_file() {
-    if ! curl -sfL "$NEW_FILE_URL" -o "$TEMP_DOWNLOAD" -H "Cache-Control: no-cache"; then
+    TEMP_DOWNLOAD="$(mktemp /tmp/sysctl_new.XXXXXX)"
+    if ! curl -sfL "${NEW_FILE_URL}?$(date +%s)" -o "$TEMP_DOWNLOAD"; then
         echo -e "${RED}✖ Failed to download the new config!${RESET}"
         exit 1
     fi
@@ -85,9 +79,11 @@ download_file() {
         echo -e "${RED}✖ Downloaded file is empty!${RESET}"
         exit 1
     fi
+    echo "$TEMP_DOWNLOAD"
 }
 
 show_diff() {
+    local TEMP_DOWNLOAD="$1"
     if command -v diff >/dev/null 2>&1; then
         diff_output=$(diff -u "$CONFIG_FILE" "$TEMP_DOWNLOAD" || true)
         if [[ -n "$diff_output" ]]; then
@@ -112,6 +108,7 @@ show_diff() {
 }
 
 apply_update() {
+    local TEMP_DOWNLOAD="$1"
     cp "$CONFIG_FILE" "$BACKUP_FILE"
     cp "$TEMP_DOWNLOAD" "$CONFIG_FILE"
     echo -e "${GREEN}✔ Updated! Backup saved at: ${BOLD}$BACKUP_FILE${RESET}"
@@ -174,12 +171,12 @@ while true; do
     case "$choice" in
         1)
             check_internet
-            download_file
-            show_diff
+            TEMP_DOWNLOAD="$(download_file)"
+            show_diff "$TEMP_DOWNLOAD"
             echo -ne "${BOLD}Apply these changes? (y/n): ${RESET}"
             read -r apply_choice
             if [[ "$apply_choice" =~ ^[Yy]$ ]]; then
-                apply_update
+                apply_update "$TEMP_DOWNLOAD"
             else
                 echo -e "${YELLOW}✱ Update cancelled.${RESET}"
             fi
