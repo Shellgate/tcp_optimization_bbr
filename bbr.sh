@@ -10,7 +10,7 @@ set -euo pipefail
 #    - Creates a backup before any change.
 # 2) Restore Backup: Restore previous sysctl.conf from backup.
 # 3) Exit
-# - After update or restore, you can choose to reboot for full effect.
+# - After update or restore (even if nothing changed), you can choose to reboot for full effect.
 # ==========================================
 
 # --------- CONFIGURATION ---------
@@ -161,7 +161,6 @@ apply_update() {
         echo -e "${YELLOW}sysctl output:${RESET}\n$sysctl_out"
         echo -e "${RED}Check your sysctl.conf for mistakes, especially lines shown above.${RESET}"
     fi
-    prompt_reboot
 }
 
 restore_backup() {
@@ -177,7 +176,6 @@ restore_backup() {
             echo -e "${YELLOW}sysctl output:${RESET}\n$sysctl_out"
             echo -e "${RED}Check your sysctl.conf for mistakes, especially lines shown above.${RESET}"
         fi
-        prompt_reboot
     else
         echo -e "${RED}✖ No backup found to restore!${RESET}"
     fi
@@ -205,19 +203,20 @@ while true; do
         1)
             check_internet
             download_file
-            if show_diff; then
-                echo -ne "${BOLD}Apply these changes? (y/n): ${RESET}"
-                read -r apply_choice
-                if [[ "$apply_choice" =~ ^[Yy]$ ]]; then
-                    apply_update
-                else
-                    echo -e "${YELLOW}✱ Update cancelled.${RESET}"
-                fi
+            show_diff
+            echo -ne "${BOLD}Apply these changes? (y/n): ${RESET}"
+            read -r apply_choice
+            if [[ "$apply_choice" =~ ^[Yy]$ ]]; then
+                apply_update
+            else
+                echo -e "${YELLOW}✱ Update cancelled.${RESET}"
             fi
+            prompt_reboot
             echo -e "${DIM}Press ENTER to return to the menu...${RESET}"; read -r
             ;;
         2)
             restore_backup
+            prompt_reboot
             echo -e "${DIM}Press ENTER to return to the menu...${RESET}"; read -r
             ;;
         3)
