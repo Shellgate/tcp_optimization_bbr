@@ -114,7 +114,7 @@ prompt_reboot() {
 
 show_menu() {
     clear
-    echo -e "${BG}${WHITE}${BOLD}   TCP Optimization BBR Manager   ${RESET}\n"
+    echo -e "${BG}${WHITE}${BOLD}   TCP Optimization Manager   ${RESET}\n"
     echo -e "${CYAN}1) ${WHITE}Update & Optimize (Recommended)"
     echo -e "${CYAN}2) ${WHITE}Restore Backup"
     echo -e "${CYAN}3) ${WHITE}Exit${RESET}"
