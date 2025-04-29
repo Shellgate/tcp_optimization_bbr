@@ -50,7 +50,6 @@ ensure_backup_dir() {
 }
 
 show_system_info() {
-    echo -e "${BLUE}${BOLD}Server Information:${RESET}"
     # OS
     if command -v lsb_release >/dev/null 2>&1; then
         os_name=$(lsb_release -d 2>/dev/null | cut -f2)
@@ -67,49 +66,23 @@ show_system_info() {
     fi
     # RAM
     if command -v free >/dev/null 2>&1; then
-        ram_mb=$(free -m | awk '/^Mem:/ {print $2 " MB"}')
+        ram_mb=$(free -m | awk '/^Mem:/ {printf "%.0f GB", $2/1024}')
     else
         ram_mb="N/A"
     fi
     # Disk Size (Total GB)
     if command -v lsblk >/dev/null 2>&1; then
-        disk_gb=$(lsblk -bdo SIZE,TYPE | awk '$2=="disk"{sum+=$1} END{printf "%.2f GB", sum/1024/1024/1024}')
+        disk_gb=$(lsblk -bdo SIZE,TYPE | awk '$2=="disk"{sum+=$1} END{printf "%.0f GB", sum/1024/1024/1024}')
     else
         disk_gb="N/A"
     fi
-    # Network Card Speed (show highest detected, e.g. 10G, 1G)
-    nic_speed="N/A"
-    if command -v ethtool >/dev/null 2>&1; then
-        for intf in $(ls /sys/class/net | grep -v lo); do
-            if ethtool "$intf" 2>/dev/null | grep -q "Speed:"; then
-                speed=$(ethtool "$intf" 2>/dev/null | awk -F ': ' '/Speed:/{print $2}')
-                if [[ "$speed" == *"10000Mb"* ]]; then
-                    nic_speed="10G"
-                    break
-                elif [[ "$speed" == *"25000Mb"* ]]; then
-                    nic_speed="25G"
-                    break
-                elif [[ "$speed" == *"40000Mb"* ]]; then
-                    nic_speed="40G"
-                    break
-                elif [[ "$speed" == *"100000Mb"* ]]; then
-                    nic_speed="100G"
-                    break
-                elif [[ "$speed" == *"1000Mb"* ]]; then
-                    nic_speed="1G"
-                elif [[ "$speed" == *"100Mb"* && "$nic_speed" == "N/A" ]]; then
-                    nic_speed="100M"
-                fi
-            fi
-        done
-    fi
-    echo -e "${WHITE}┌───────────────────────────────────────────────┐${RESET}"
-    printf "${WHITE}│ %-12s: %-30s │\n" "OS" "$os_name"
-    printf "${WHITE}│ %-12s: %-30s │\n" "CPU" "$cpu_name"
-    printf "${WHITE}│ %-12s: %-30s │\n" "RAM" "$ram_mb"
-    printf "${WHITE}│ %-12s: %-30s │\n" "Disk" "$disk_gb"
-    printf "${WHITE}│ %-12s: %-30s │\n" "NIC" "$nic_speed"
-    echo -e "${WHITE}└───────────────────────────────────────────────┘${RESET}\n"
+
+    echo -e "${BLUE}${BOLD}-------------------------------------------${RESET}"
+    printf "${CYAN}%-12s${RESET}: %s\n"  "OS"    "$os_name"
+    printf "${CYAN}%-12s${RESET}: %s\n"  "CPU"   "$cpu_name"
+    printf "${CYAN}%-12s${RESET}: %s\n"  "RAM"   "$ram_mb"
+    printf "${CYAN}%-12s${RESET}: %s\n"  "Disk"  "$disk_gb"
+    echo -e "${BLUE}${BOLD}-------------------------------------------${RESET}\n"
 }
 
 check_internet() {
@@ -135,7 +108,7 @@ show_diff() {
     if command -v diff >/dev/null 2>&1; then
         diff_output=$(diff -u "$CONFIG_FILE" "$TEMP_DOWNLOAD" || true)
         if [[ -n "$diff_output" ]]; then
-            echo -e "${YELLOW}${BOLD}▲ Configuration Changes:${RESET}"
+            echo -e "${YELLOW}${BOLD}Configuration Changes:${RESET}"
             echo -e "${CYAN}$diff_output${RESET}"
             return 0
         else
