@@ -1,198 +1,161 @@
 #!/bin/bash
 set -euo pipefail
 
-project="TCP Optimization BBR"
-config_file="/etc/sysctl.conf"
-backup_dir="/etc/sysctl_backups"
-backup_file="$backup_dir/sysctl.conf.$(date +%Y%m%d_%H%M%S)"
-latest_backup="$backup_dir/sysctl.conf.latest"
-new_file_url="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf"
-temp_download="$(mktemp /tmp/sysctl_new.XXXXXX)"
-lock_file="/tmp/.bbr_update.lock"
+# ================================
+#   TCP Optimization Manager
+# ================================
+# 1) Update & Optimize: Download & apply latest optimized sysctl.conf (with backup & diff)
+# 2) Restore Backup: Restore previous config from backup
+# 3) Exit
+# After update/restore, you can choose to reboot for all changes to take effect.
+# ================================
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
+# ---- SETTINGS ----
+CONFIG_FILE="/etc/sysctl.conf"
+BACKUP_DIR="/etc/sysctl_backups"
+BACKUP_FILE="${BACKUP_DIR}/sysctl.conf.latest"
+NEW_FILE_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf"
+TEMP_DOWNLOAD="$(mktemp /tmp/sysctl_new.XXXXXX)"
+
+# ---- COLORS ----
+RESET='\033[0m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RED='\033[1;31m'
+GREEN='\033[1;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[1;34m'
-NC='\033[0m'
+CYAN='\033[1;36m'
+MAGENTA='\033[1;35m'
+WHITE='\033[1;37m'
+BG="\033[48;5;236m" # Soft background
 
+# ---- CLEANUP ----
 cleanup() {
-    rm -f "$temp_download" "$lock_file"
+    rm -f "$TEMP_DOWNLOAD"
 }
 trap cleanup EXIT
 
-# Check root
+# ---- FUNCTIONS ----
+
 require_root() {
-    if [[ $EUID -ne 0 ]]; then
-        echo -e "${RED}This script must be run as root. Exiting.${NC}" >&2
-        exit 1
-    fi
+    [[ $EUID -eq 0 ]] || { echo -e "${RED}✖ This script must be run as root.${RESET}"; exit 1; }
 }
 
-# Make backup dir if not exists
 ensure_backup_dir() {
-    [[ -d "$backup_dir" ]] || mkdir -p "$backup_dir"
+    [[ -d "$BACKUP_DIR" ]] || mkdir -p "$BACKUP_DIR"
 }
 
-# Prevent concurrent runs
-lock_script() {
-    if [[ -f "$lock_file" ]]; then
-        echo -e "${YELLOW}Another update is in progress. Try again later.${NC}"
-        exit 1
-    fi
-    touch "$lock_file"
-}
-
-# Show system info (robust & compatible)
-display_info() {
-    echo -e "\n${BLUE}=== $project ===${NC}"
-    echo -e "${YELLOW}System Information:${NC}"
-    echo -e "+------------------------+"
-    # OS
-    if command -v lsb_release >/dev/null 2>&1; then
-        os_name=$(lsb_release -d 2>/dev/null | cut -f2)
-    elif [[ -f /etc/os-release ]]; then
-        os_name=$(awk -F= '/^PRETTY_NAME/{print $2}' /etc/os-release | tr -d '"')
-    else
-        os_name="N/A"
-    fi
-    echo -e "|  OS: ${os_name:-N/A}  |"
-    # CPU
-    if grep -q 'model name' /proc/cpuinfo 2>/dev/null; then
-        cpu_name=$(grep 'model name' /proc/cpuinfo | head -n1 | cut -d' ' -f3-)
-    else
-        cpu_name="N/A"
-    fi
-    echo -e "|  CPU: ${cpu_name:-N/A}  |"
-    # RAM
-    if command -v free >/dev/null 2>&1; then
-        ram_mb=$(free -m | awk '/^Mem:/ {print $2 " MB"}')
-    else
-        ram_mb="N/A"
-    fi
-    echo -e "|  RAM: ${ram_mb:-N/A}  |"
-    echo -e "+------------------------+"
-}
-
-# Check internet
 check_internet() {
-    if ! curl -s --head https://raw.githubusercontent.com/ >/dev/null; then
-        echo -e "${RED}Error: No internet connection!${NC}"
+    curl -s --head https://raw.githubusercontent.com/ >/dev/null || {
+        echo -e "${RED}✖ No internet connection!${RESET}"
         exit 1
-    fi
+    }
 }
 
-# Download latest config (no cache)
 download_file() {
-    if ! curl -sfL "$new_file_url" -o "$temp_download" -H "Cache-Control: no-cache"; then
-        echo -e "${RED}Error: Failed to download the new file!${NC}"
+    if ! curl -sfL "$NEW_FILE_URL" -o "$TEMP_DOWNLOAD" -H "Cache-Control: no-cache"; then
+        echo -e "${RED}✖ Failed to download the new config!${RESET}"
         exit 1
     fi
-    if ! grep -q . "$temp_download"; then
-        echo -e "${RED}Error: Downloaded file is empty!${NC}"
+    if ! grep -q . "$TEMP_DOWNLOAD"; then
+        echo -e "${RED}✖ Downloaded file is empty!${RESET}"
         exit 1
     fi
 }
 
-# Backup current config with timestamp and update 'latest'
-backup_current() {
-    cp "$config_file" "$backup_file"
-    cp "$config_file" "$latest_backup"
-    echo -e "${GREEN}Backup created: $backup_file${NC}"
-}
-
-# List available backups
-list_backups() {
-    echo -e "${YELLOW}Available backups:${NC}"
-    ls -1 "$backup_dir"/sysctl.conf.* 2>/dev/null | xargs -n 1 basename || echo "No backups found."
-}
-
-# Show diff (with fallback)
 show_diff() {
-    if command -v diff &>/dev/null; then
-        echo -e "${YELLOW}Diff between current and new version:${NC}"
-        diff -u "$config_file" "$temp_download" || echo -e "${BLUE}No changes found.${NC}"
+    if command -v diff >/dev/null 2>&1; then
+        diff_output=$(diff -u "$CONFIG_FILE" "$TEMP_DOWNLOAD" || true)
+        if [[ -n "$diff_output" ]]; then
+            echo -e "${YELLOW}${BOLD}▲ Changes detected:${RESET}"
+            echo -e "${CYAN}$diff_output${RESET}"
+            return 0
+        else
+            echo -e "${GREEN}✔ You already have the latest optimized configuration.${RESET}"
+            return 1
+        fi
     else
-        echo -e "${YELLOW}diff command not found, can't show difference.${NC}"
+        echo -e "${YELLOW}⚠ diff not found. Cannot show changes.${RESET}"
+        return 2
     fi
 }
 
-# Apply the new config file
 apply_update() {
-    cp "$temp_download" "$config_file"
-    echo -e "${GREEN}File replaced successfully.${NC}"
+    cp "$CONFIG_FILE" "$BACKUP_FILE"
+    cp "$TEMP_DOWNLOAD" "$CONFIG_FILE"
+    echo -e "${GREEN}✔ Updated! Backup saved at: ${BOLD}$BACKUP_FILE${RESET}"
     if sysctl -p; then
-        echo -e "${GREEN}New settings applied.${NC}"
+        echo -e "${GREEN}✔ sysctl settings applied.${RESET}"
     else
-        echo -e "${RED}Warning: sysctl -p failed! Please check your config.${NC}"
+        echo -e "${RED}✖ Warning: sysctl -p failed. Please check your config.${RESET}"
     fi
 }
 
-# Restore from a selected backup
 restore_backup() {
-    list_backups
-    read -p "Enter the backup filename to restore: " restore_file
-    if [[ -f "$backup_dir/$restore_file" ]]; then
-        cp "$backup_dir/$restore_file" "$config_file"
-        sysctl -p && echo -e "${GREEN}Restored successfully from $restore_file.${NC}"
+    if [[ -f "$BACKUP_FILE" ]]; then
+        cp "$BACKUP_FILE" "$CONFIG_FILE"
+        echo -e "${GREEN}✔ Restored from backup: ${BOLD}$BACKUP_FILE${RESET}"
+        if sysctl -p; then
+            echo -e "${GREEN}✔ sysctl settings applied after restore.${RESET}"
+        else
+            echo -e "${RED}✖ Warning: sysctl -p failed after restore!${RESET}"
+        fi
     else
-        echo -e "${RED}Backup file not found!${NC}"
+        echo -e "${RED}✖ No backup found to restore!${RESET}"
     fi
 }
 
-# Ask for system restart
-prompt_restart() {
-    read -p "Restart the system? (y/n): " restart_choice
-    case $restart_choice in
-        [Yy]*) reboot ;;
-        *) echo "No restart." ;;
-    esac
+prompt_reboot() {
+    echo -ne "${MAGENTA}${BOLD}↻ Do you want to reboot now for all changes to take effect? (y/n): ${RESET}"
+    read -r reboot_choice
+    [[ "$reboot_choice" =~ ^[Yy]$ ]] && reboot
 }
 
-# -- MAIN --
+show_menu() {
+    clear
+    echo -e "${BG}${WHITE}${BOLD}   TCP Optimization BBR Manager   ${RESET}\n"
+    echo -e "${CYAN}1) ${WHITE}Update & Optimize (Recommended)"
+    echo -e "${CYAN}2) ${WHITE}Restore Backup"
+    echo -e "${CYAN}3) ${WHITE}Exit${RESET}"
+}
+
+# ---- MAIN ----
+
 require_root
-lock_script
 ensure_backup_dir
-display_info
 
-options=("Update & Optimize" "Show Config Diff" "Restore Backup" "List Backups" "Exit")
-PS3="Select an option: "
-
-select opt in "${options[@]}"; do
-    case $REPLY in
+while true; do
+    show_menu
+    echo -ne "${BOLD}Select an option [1-3]: ${RESET}"
+    read -r choice
+    case "$choice" in
         1)
             check_internet
             download_file
-            backup_current
-            show_diff
-            read -p "Apply changes? (y/n): " apply_choice
-            if [[ "$apply_choice" =~ ^[Yy]$ ]]; then
-                apply_update
-                prompt_restart
-            else
-                echo -e "${YELLOW}No changes applied.${NC}"
+            if show_diff; then
+                echo -ne "${BOLD}Apply these changes? (y/n): ${RESET}"
+                read -r apply_choice
+                if [[ "$apply_choice" =~ ^[Yy]$ ]]; then
+                    apply_update
+                    prompt_reboot
+                else
+                    echo -e "${YELLOW}✱ Update cancelled.${RESET}"
+                fi
             fi
-            exit 0
+            echo -e "${DIM}Press ENTER to return to the menu...${RESET}"; read -r
             ;;
         2)
-            check_internet
-            download_file
-            show_diff
-            exit 0
+            restore_backup
+            prompt_reboot
+            echo -e "${DIM}Press ENTER to return to the menu...${RESET}"; read -r
             ;;
         3)
-            restore_backup
-            prompt_restart
-            exit 0
-            ;;
-        4)
-            list_backups
-            ;;
-        5)
-            echo -e "${RED}Exited.${NC}"
-            exit 0
+            echo -e "${BLUE}${BOLD}Goodbye!${RESET}"
+            break
             ;;
         *)
-            echo -e "${RED}Invalid option!${NC}" ;;
+            echo -e "${RED}✖ Invalid option!${RESET}"
+            ;;
     esac
 done
