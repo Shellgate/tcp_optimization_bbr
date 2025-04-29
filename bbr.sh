@@ -4,15 +4,7 @@ set -euo pipefail
 # ==========================================
 #         TCP Optimization Manager
 # ==========================================
-# 1) Update & Optimize: Download & apply the latest optimized sysctl.conf
-#    - Shows server info and config differences before applying.
-#    - Always fetches the latest version directly from GitHub.
-#    - Creates a backup before any change.
-# 2) Restore Backup: Restore previous sysctl.conf from backup.
-# 3) Exit
-# - After update or restore (even if nothing changed), you can choose to reboot for full effect.
-# ==========================================
-
+# 
 # --------- CONFIGURATION ---------
 CONFIG_FILE="/etc/sysctl.conf"
 BACKUP_DIR="/etc/sysctl_backups"
