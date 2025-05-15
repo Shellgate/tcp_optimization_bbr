@@ -1,87 +1,119 @@
 #!/bin/bash
 
 # Colors
-GREEN="\e[32m"
-RED="\e[31m"
-YELLOW="\e[33m"
-BLUE="\e[34m"
+BLUE="\e[38;5;75m"
+GREEN="\e[38;5;82m"
+YELLOW="\e[38;5;228m"
+RED="\e[38;5;196m"
+GRAY="\e[38;5;245m"
 RESET="\e[0m"
+BOLD="\e[1m"
 
 # Paths
-SYSCTL_FILE="/etc/sysctl.conf"
-BACKUP_FILE="/etc/sysctl.conf.bak"
+BACKUP_PATH="/etc/sysctl.conf.bbr.bak"
+SYSCTL_PATH="/etc/sysctl.conf"
+TMP_FILE="/tmp/sysctl.new"
 
-# Show basic system info
+# Function: System Info
 function show_system_info() {
-    echo -e "${BLUE}System Info${RESET}"
-    echo -e "${YELLOW}CPU:${RESET} $(lscpu | grep 'Model name' | sed 's/Model name:\s*//')"
-    echo -e "${YELLOW}Cores:${RESET} $(nproc)"
-    echo -e "${YELLOW}RAM:${RESET} $(free -h | awk '/^Mem:/ {print $2}')"
-    echo -e "${YELLOW}Used:${RESET} $(free -h | awk '/^Mem:/ {print $3}')"
-    echo -e "${YELLOW}Disk:${RESET}"
-    df -h / | awk 'NR==1 || NR==2' | sed 's/^/  /'
+    CPU_MODEL=$(lscpu | grep "Model name" | sed 's/Model name:\s*//')
+    CORES=$(nproc)
+    RAM_TOTAL=$(free -h | awk '/^Mem:/ {print $2}')
+    RAM_USED=$(free -h | awk '/^Mem:/ {print $3}')
+    DISK_TOTAL=$(df -h / | awk 'NR==2 {print $2}')
+    DISK_USED=$(df -h / | awk 'NR==2 {print $3}')
+    DISK_AVAIL=$(df -h / | awk 'NR==2 {print $4}')
+    KERNEL=$(uname -r)
+    UPTIME=$(uptime -p)
+    INTERFACE=$(ip route get 1.1.1.1 | awk '{print $5; exit}')
+    SPEED=$(ethtool "$INTERFACE" 2>/dev/null | grep -i speed | awk '{print $2}')
+    LOCAL_IP=$(hostname -I | awk '{print $1}')
+    PUBLIC_IP=$(curl -s https://api.ipify.org)
+    BBR_STATUS=$(sysctl net.ipv4.tcp_congestion_control | awk '{print $3}')
+    BBR_ACTIVE=$(lsmod | grep bbr)
+    PING_TEST=$(ping -c 1 -W 1 8.8.8.8 >/dev/null 2>&1 && echo "Online" || echo "Offline")
+
+    echo -e "${BLUE}${BOLD}╔═══════════════ System Summary ═══════════════╗${RESET}"
+    printf "${YELLOW}%-15s${RESET} %s\n" "CPU:" "$CPU_MODEL"
+    printf "${YELLOW}%-15s${RESET} %s cores\n" "Cores:" "$CORES"
+    printf "${YELLOW}%-15s${RESET} %s / %s used\n" "RAM:" "$RAM_USED" "$RAM_TOTAL"
+    printf "${YELLOW}%-15s${RESET} %s / %s used\n" "Disk:" "$DISK_USED" "$DISK_TOTAL"
+    printf "${YELLOW}%-15s${RESET} %s available\n" "" "$DISK_AVAIL"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Kernel:" "$KERNEL"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Uptime:" "$UPTIME"
+    echo -e "${GRAY}──────────────── Network ────────────────${RESET}"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Interface:" "$INTERFACE"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Speed:" "${SPEED:-Unknown}"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Local IP:" "$LOCAL_IP"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Public IP:" "$PUBLIC_IP"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Internet:" "$PING_TEST"
+    echo -e "${GRAY}───────────────── BBR ───────────────────${RESET}"
+    printf "${YELLOW}%-15s${RESET} %s\n" "Congestion:" "$BBR_STATUS"
+    if [[ "$BBR_ACTIVE" == *bbr* ]]; then
+        printf "${YELLOW}%-15s${GREEN}Active${RESET}\n" "BBR Module:"
+    else
+        printf "${YELLOW}%-15s${RED}Inactive${RESET}\n" "BBR Module:"
+    fi
+    echo -e "${BLUE}${BOLD}╚═════════════════════════════════════════╝${RESET}"
     echo
 }
 
-# Intro text
-function show_intro() {
-    echo -e "${GREEN}BBR Optimization Script${RESET}"
-    echo -e "Backup, apply or restore sysctl network tuning configs."
-    echo
-}
+# Function: Download and Apply sysctl.conf
+function install_bbr() {
+    echo -e "${BLUE}→ Preparing to install System optimization...${RESET}"
+    
+    [[ -f "$BACKUP_PATH" ]] && rm -f "$BACKUP_PATH"
+    cp "$SYSCTL_PATH" "$BACKUP_PATH"
+    echo -e "${GREEN}✓ Backup saved to $BACKUP_PATH${RESET}"
 
-# Option 1: Update sysctl.conf
-function update_and_install() {
-    echo -e "${BLUE}Creating backup...${RESET}"
-    [ -f "$BACKUP_FILE" ] && rm -f "$BACKUP_FILE"
-    cp "$SYSCTL_FILE" "$BACKUP_FILE"
-
-    echo -e "${BLUE}Fetching new config...${RESET}"
-    curl -fsSL https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf -o "$SYSCTL_FILE"
-
-    echo -e "${BLUE}Applying settings...${RESET}"
-    sysctl -p
-
-    echo -e "${BLUE}Changes:${RESET}"
-    diff --color=always "$BACKUP_FILE" "$SYSCTL_FILE" || echo -e "${YELLOW}(No differences found)${RESET}"
-    echo
-
-    read -rp "Reboot now? (y/n): " reboot_choice
-    [[ "$reboot_choice" =~ ^[Yy]$ ]] && reboot
-}
-
-# Option 2: Restore backup
-function restore_backup() {
-    if [ ! -f "$BACKUP_FILE" ]; then
-        echo -e "${RED}No backup found.${RESET}"
-        return
+    curl -s -o "$TMP_FILE" https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}✗ Failed to download configuration file.${RESET}"
+        exit 1
     fi
 
-    echo -e "${BLUE}Restoring backup...${RESET}"
-    cp "$BACKUP_FILE" "$SYSCTL_FILE"
+    cp "$TMP_FILE" "$SYSCTL_PATH"
+    echo -e "${GREEN}✓ Configuration applied.${RESET}"
+
+    echo -e "${BLUE}→ Applied Changes:${RESET}"
+    diff -u "$BACKUP_PATH" "$SYSCTL_PATH" || echo -e "${GRAY}(No differences shown)${RESET}"
+
     sysctl -p
 
-    read -rp "Reboot now? (y/n): " reboot_choice
-    [[ "$reboot_choice" =~ ^[Yy]$ ]] && reboot
+    echo
+    read -p "→ Reboot system now? [y/N]: " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] && reboot
 }
 
-# Menu
-function show_menu() {
-    echo -e "${BLUE}Menu:${RESET}"
-    echo "1) Apply optimized config"
-    echo "2) Restore previous config"
-    echo "3) Exit"
-    read -rp "Select: " choice
-    case $choice in
-        1) update_and_install ;;
-        2) restore_backup ;;
-        3) echo -e "${YELLOW}Exiting...${RESET}" ;;
-        *) echo -e "${RED}Invalid option.${RESET}" ;;
-    esac
+# Function: Restore backup
+function restore_backup() {
+    if [[ -f "$BACKUP_PATH" ]]; then
+        cp "$BACKUP_PATH" "$SYSCTL_PATH"
+        echo -e "${GREEN}✓ Backup restored.${RESET}"
+        sysctl -p
+        echo
+        read -p "→ Reboot system now? [y/N]: " confirm
+        [[ "$confirm" =~ ^[Yy]$ ]] && reboot
+    else
+        echo -e "${RED}✗ No backup file found.${RESET}"
+    fi
 }
 
-# Main
+# Show system info
 clear
 show_system_info
-show_intro
-show_menu
+
+# Menu
+echo -e "${BOLD}Choose an option:${RESET}"
+echo -e "${YELLOW}1)${RESET} Install / Update System Optimization"
+echo -e "${YELLOW}2)${RESET} Restore Previous Configuration"
+echo -e "${YELLOW}3)${RESET} Exit"
+echo
+read -p "Enter choice [1-3]: " option
+
+case "$option" in
+    1) install_bbr ;;
+    2) restore_backup ;;
+    3) echo -e "${GRAY}Exiting...${RESET}" ;;
+    *) echo -e "${RED}Invalid option.${RESET}" ;;
+esac
