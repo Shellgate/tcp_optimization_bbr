@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Colors
+WHITE="\e[97m"
 BLUE="\e[38;5;75m"
 GREEN="\e[38;5;82m"
 YELLOW="\e[38;5;228m"
@@ -76,8 +77,22 @@ function install_bbr() {
     echo -e "${GREEN}✓ Configuration applied.${RESET}"
 
     echo -e "${BLUE}→ Applied Changes:${RESET}"
-    diff -u "$BACKUP_PATH" "$SYSCTL_PATH" || echo -e "${GRAY}(No differences shown)${RESET}"
-
+    DIFF_OUTPUT=$(diff -u "$BACKUP_PATH" "$SYSCTL_PATH")
+    
+    if [[ -z "$DIFF_OUTPUT" ]]; then
+    echo -e "${GRAY}(No differences shown)${RESET}"
+    else
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^\+ && ! "$line" =~ ^\+\+ ]]; then
+            echo -e "${GREEN}$line${RESET}"
+        elif [[ "$line" =~ ^\- && ! "$line" =~ ^\-\- ]]; then
+            echo -e "${RED}$line${RESET}"
+        else
+            echo -e "${WHITE:-\e[97m}$line${RESET}"
+        fi
+    done <<< "$DIFF_OUTPUT"
+    fi
+    
     sysctl -p
 
     echo
