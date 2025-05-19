@@ -1,21 +1,16 @@
 #!/bin/bash
 
 # Colors
+CYAN="\e[38;5;51m"
+AQUA="\e[38;5;45m"
+LIME="\e[38;5;154m"
+GRAY="\e[38;5;250m"
 WHITE="\e[97m"
-BLUE="\e[38;5;75m"
-GREEN="\e[38;5;82m"
+MAGENTA="\e[38;5;213m"
 YELLOW="\e[38;5;228m"
-RED="\e[38;5;196m"
-GRAY="\e[38;5;245m"
-RESET="\e[0m"
 BOLD="\e[1m"
+RESET="\e[0m"
 
-# Paths
-BACKUP_PATH="/etc/sysctl.conf.bbr.bak"
-SYSCTL_PATH="/etc/sysctl.conf"
-TMP_FILE="/tmp/sysctl.new"
-
-# Function: System Info
 function show_system_info() {
     CPU_MODEL=$(lscpu | grep "Model name" | sed 's/Model name:\s*//')
     CORES=$(nproc)
@@ -34,28 +29,28 @@ function show_system_info() {
     BBR_ACTIVE=$(lsmod | grep bbr)
     PING_TEST=$(ping -c 1 -W 1 8.8.8.8 >/dev/null 2>&1 && echo "Online" || echo "Offline")
 
-    echo -e "${BLUE}${BOLD}╔═══════════════ System Summary ═══════════════╗${RESET}"
-    printf "${YELLOW}%-15s${RESET} %s\n" "CPU:" "$CPU_MODEL"
-    printf "${YELLOW}%-15s${RESET} %s cores\n" "Cores:" "$CORES"
-    printf "${YELLOW}%-15s${RESET} %s / %s used\n" "RAM:" "$RAM_USED" "$RAM_TOTAL"
-    printf "${YELLOW}%-15s${RESET} %s / %s used\n" "Disk:" "$DISK_USED" "$DISK_TOTAL"
-    printf "${YELLOW}%-15s${RESET} %s available\n" "" "$DISK_AVAIL"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Kernel:" "$KERNEL"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Uptime:" "$UPTIME"
-    echo -e "${GRAY}──────────────── Network ────────────────${RESET}"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Interface:" "$INTERFACE"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Speed:" "${SPEED:-Unknown}"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Local IP:" "$LOCAL_IP"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Public IP:" "$PUBLIC_IP"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Internet:" "$PING_TEST"
-    echo -e "${GRAY}───────────────── BBR ───────────────────${RESET}"
-    printf "${YELLOW}%-15s${RESET} %s\n" "Congestion:" "$BBR_STATUS"
+    echo -e "${AQUA}${BOLD}╔═══════════════ SYSTEM SUMMARY ═══════════════╗${RESET}"
+    printf "${CYAN}%-15s${WHITE}%s\n" "CPU:" "$CPU_MODEL"
+    printf "${CYAN}%-15s${LIME}%s${WHITE} cores\n" "Cores:" "$CORES"
+    printf "${CYAN}%-15s${LIME}%s${WHITE} / ${LIME}%s${WHITE} used\n" "RAM:" "$RAM_USED" "$RAM_TOTAL"
+    printf "${CYAN}%-15s${LIME}%s${WHITE} / ${LIME}%s${WHITE} used\n" "Disk:" "$DISK_USED" "$DISK_TOTAL"
+    printf "${CYAN}%-15s${GRAY}%s available\n" "" "$DISK_AVAIL"
+    printf "${MAGENTA}%-15s${WHITE}%s\n" "Kernel:" "$KERNEL"
+    printf "${MAGENTA}%-15s${WHITE}%s\n" "Uptime:" "$UPTIME"
+    echo -e "${GRAY}──────────────────── NETWORK ───────────────────${RESET}"
+    printf "${CYAN}%-15s${WHITE}%s\n" "Interface:" "$INTERFACE"
+    printf "${CYAN}%-15s${WHITE}%s\n" "Speed:" "${SPEED:-Unknown}"
+    printf "${CYAN}%-15s${WHITE}%s\n" "Local IP:" "$LOCAL_IP"
+    printf "${CYAN}%-15s${WHITE}%s\n" "Public IP:" "$PUBLIC_IP"
+    printf "${CYAN}%-15s${WHITE}%s\n" "Internet:" "$PING_TEST"
+    echo -e "${GRAY}───────────────────── BBR ─────────────────────${RESET}"
+    printf "${CYAN}%-15s${WHITE}%s\n" "Congestion:" "$BBR_STATUS"
     if [[ "$BBR_ACTIVE" == *bbr* ]]; then
-        printf "${YELLOW}%-15s${GREEN}Active${RESET}\n" "BBR Module:"
+        printf "${CYAN}%-15s${LIME}Active${RESET}\n" "BBR Module:"
     else
-        printf "${YELLOW}%-15s${RED}Inactive${RESET}\n" "BBR Module:"
+        printf "${CYAN}%-15s${MAGENTA}Inactive${RESET}\n" "BBR Module:"
     fi
-    echo -e "${BLUE}${BOLD}╚═════════════════════════════════════════╝${RESET}"
+    echo -e "${AQUA}${BOLD}╚══════════════════════════════════════════════╝${RESET}"
     echo
 }
 
@@ -93,7 +88,7 @@ function install_bbr() {
     done <<< "$DIFF_OUTPUT"
     fi
     
-    sysctl -p
+    sysctl -p > /dev/null 2>&1
 
     echo
     read -p "→ Reboot system now? [y/N]: " confirm
@@ -105,7 +100,7 @@ function restore_backup() {
     if [[ -f "$BACKUP_PATH" ]]; then
         cp "$BACKUP_PATH" "$SYSCTL_PATH"
         echo -e "${GREEN}✓ Backup restored.${RESET}"
-        sysctl -p
+        sysctl -p > /dev/null 2>&1
         echo
         read -p "→ Reboot system now? [y/N]: " confirm
         [[ "$confirm" =~ ^[Yy]$ ]] && reboot
