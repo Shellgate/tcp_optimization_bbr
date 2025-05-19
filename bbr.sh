@@ -11,6 +11,12 @@ YELLOW="\e[38;5;228m"
 BOLD="\e[1m"
 RESET="\e[0m"
 
+# Paths
+BACKUP_PATH="/etc/sysctl.conf.bbr.bak"
+SYSCTL_PATH="/etc/sysctl.conf"
+TMP_FILE="/tmp/sysctl.new"
+
+# Function: System Info
 function show_system_info() {
     CPU_MODEL=$(lscpu | grep "Model name" | sed 's/Model name:\s*//')
     CORES=$(nproc)
