@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # Colors
+RED="\e[38;5;196m"
+GREEN="\e[38;5;82m"
+BLUE="\e[38;5;75m"
 CYAN="\e[38;5;51m"
 AQUA="\e[38;5;45m"
 LIME="\e[38;5;154m"
