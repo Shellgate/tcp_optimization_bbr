@@ -14,10 +14,17 @@ YELLOW="\e[38;5;228m"
 BOLD="\e[1m"
 RESET="\e[0m"
 
-# Paths
+# Paths - sysctl
 BACKUP_PATH="/etc/sysctl.conf.bbr.bak"
 SYSCTL_PATH="/etc/sysctl.conf"
 TMP_FILE="/tmp/sysctl.new"
+SYSCTL_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf"
+
+# Paths - limits
+LIMITS_PATH="/etc/security/limits.conf"
+LIMITS_BACKUP="/etc/security/limits.conf.bbr.bak"
+LIMITS_TMP="/tmp/limits.new"
+LIMITS_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/etc/security/limits.conf"
 
 # Function: System Info
 function show_system_info() {
@@ -65,46 +72,76 @@ function show_system_info() {
 
 # Function: Download and Apply sysctl.conf
 function install_bbr() {
-    echo -e "${BLUE}→ Preparing to install System optimization...${RESET}"
-    
+    echo -e "${BLUE}→ Preparing to install system optimization...${RESET}"
     [[ -f "$BACKUP_PATH" ]] && rm -f "$BACKUP_PATH"
     cp "$SYSCTL_PATH" "$BACKUP_PATH"
     echo -e "${GREEN}✓ Backup saved to $BACKUP_PATH${RESET}"
 
-    curl -s -o "$TMP_FILE" https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf
+    curl -s -o "$TMP_FILE" "$SYSCTL_URL"
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}✗ Failed to download configuration file.${RESET}"
         exit 1
     fi
-
     cp "$TMP_FILE" "$SYSCTL_PATH"
     echo -e "${GREEN}✓ Configuration applied.${RESET}"
 
     echo -e "${BLUE}→ Applied Changes:${RESET}"
     DIFF_OUTPUT=$(diff -u "$BACKUP_PATH" "$SYSCTL_PATH")
-    
     if [[ -z "$DIFF_OUTPUT" ]]; then
-    echo -e "${GRAY}(No differences shown)${RESET}"
+        echo -e "${GRAY}(No differences shown)${RESET}"
     else
-    while IFS= read -r line; do
-        if [[ "$line" =~ ^\+ && ! "$line" =~ ^\+\+ ]]; then
-            echo -e "${GREEN}$line${RESET}"
-        elif [[ "$line" =~ ^\- && ! "$line" =~ ^\-\- ]]; then
-            echo -e "${RED}$line${RESET}"
-        else
-            echo -e "${WHITE:-\e[97m}$line${RESET}"
-        fi
-    done <<< "$DIFF_OUTPUT"
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^\+ && ! "$line" =~ ^\+\+ ]]; then
+                echo -e "${GREEN}$line${RESET}"
+            elif [[ "$line" =~ ^\- && ! "$line" =~ ^\-\- ]]; then
+                echo -e "${RED}$line${RESET}"
+            else
+                echo -e "${WHITE:-\e[97m}$line${RESET}"
+            fi
+        done <<< "$DIFF_OUTPUT"
     fi
-    
     sysctl -p > /dev/null 2>&1
-
     echo
     read -p "→ Reboot system now? [y/N]: " confirm
     [[ "$confirm" =~ ^[Yy]$ ]] && reboot
 }
 
-# Function: Restore backup
+# Function: Download and Apply limits.conf
+function install_limits() {
+    echo -e "${BLUE}→ Preparing to install limits.conf optimization...${RESET}"
+    [[ -f "$LIMITS_BACKUP" ]] && rm -f "$LIMITS_BACKUP"
+    cp "$LIMITS_PATH" "$LIMITS_BACKUP"
+    echo -e "${GREEN}✓ Backup saved to $LIMITS_BACKUP${RESET}"
+
+    curl -s -o "$LIMITS_TMP" "$LIMITS_URL"
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}✗ Failed to download limits.conf file.${RESET}"
+        exit 1
+    fi
+    cp "$LIMITS_TMP" "$LIMITS_PATH"
+    echo -e "${GREEN}✓ limits.conf configuration applied.${RESET}"
+
+    echo -e "${BLUE}→ Applied Changes:${RESET}"
+    DIFF_OUTPUT=$(diff -u "$LIMITS_BACKUP" "$LIMITS_PATH")
+    if [[ -z "$DIFF_OUTPUT" ]]; then
+        echo -e "${GRAY}(No differences shown)${RESET}"
+    else
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^\+ && ! "$line" =~ ^\+\+ ]]; then
+                echo -e "${GREEN}$line${RESET}"
+            elif [[ "$line" =~ ^\- && ! "$line" =~ ^\-\- ]]; then
+                echo -e "${RED}$line${RESET}"
+            else
+                echo -e "${WHITE:-\e[97m}$line${RESET}"
+            fi
+        done <<< "$DIFF_OUTPUT"
+    fi
+    echo
+    read -p "→ Reboot system now? [y/N]: " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] && reboot
+}
+
+# Function: Restore backup sysctl.conf
 function restore_backup() {
     if [[ -f "$BACKUP_PATH" ]]; then
         cp "$BACKUP_PATH" "$SYSCTL_PATH"
@@ -118,21 +155,38 @@ function restore_backup() {
     fi
 }
 
+# Function: Restore backup limits.conf
+function restore_limits_backup() {
+    if [[ -f "$LIMITS_BACKUP" ]]; then
+        cp "$LIMITS_BACKUP" "$LIMITS_PATH"
+        echo -e "${GREEN}✓ limits.conf backup restored.${RESET}"
+        echo
+        read -p "→ Reboot system now? [y/N]: " confirm
+        [[ "$confirm" =~ ^[Yy]$ ]] && reboot
+    else
+        echo -e "${RED}✗ No limits.conf backup file found.${RESET}"
+    fi
+}
+
 # Show system info
 clear
 show_system_info
 
 # Menu
 echo -e "${BOLD}Choose an option:${RESET}"
-echo -e "${YELLOW}1)${RESET} Install / Update System Optimization"
-echo -e "${YELLOW}2)${RESET} Restore Previous Configuration"
-echo -e "${YELLOW}3)${RESET} Exit"
+echo -e "${YELLOW}1)${RESET} Install / Update Sysctl Optimization (sysctl.conf)"
+echo -e "${YELLOW}2)${RESET} Install / Update Security Limits (limits.conf)"
+echo -e "${YELLOW}3)${RESET} Restore Previous sysctl.conf Configuration"
+echo -e "${YELLOW}4)${RESET} Restore Previous limits.conf Configuration"
+echo -e "${YELLOW}5)${RESET} Exit"
 echo
-read -p "Enter choice [1-3]: " option
+read -p "Enter choice [1-5]: " option
 
 case "$option" in
     1) install_bbr ;;
-    2) restore_backup ;;
-    3) echo -e "${GRAY}Exiting...${RESET}" ;;
+    2) install_limits ;;
+    3) restore_backup ;;
+    4) restore_limits_backup ;;
+    5) echo -e "${GRAY}Exiting...${RESET}" ;;
     *) echo -e "${RED}Invalid option.${RESET}" ;;
 esac
