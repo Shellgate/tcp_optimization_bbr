@@ -1,7 +1,7 @@
 # tcp-optimizer-bbr
 A script improvement system network
 
-![IMG_۲۰۲۴۰۱۰۷_۰۲۰۵۵۵](https://github.com/user-attachments/assets/04f3ea3c-cf48-4961-9637-847457818cb1)
+![Image](https://github.com/user-attachments/assets/55d5c694-09dc-40cc-b68d-a6e1f7d89443)
 
 
 ## Install & Upgrade to latest Version
