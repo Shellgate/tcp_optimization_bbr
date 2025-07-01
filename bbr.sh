@@ -26,6 +26,10 @@ LIMITS_BACKUP="/etc/security/limits.conf.bbr.bak"
 LIMITS_TMP="/tmp/limits.new"
 LIMITS_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/etc/security/limits.conf"
 
+# gai.conf for DNS Priority
+GAI_CONF="/etc/gai.conf"
+BACKUP_GAI="/etc/gai.conf.bbr.bak"
+
 # Function: System Info
 function show_system_info() {
     CPU_MODEL=$(lscpu | grep "Model name" | sed 's/Model name:\s*//')
@@ -168,25 +172,76 @@ function restore_limits_backup() {
     fi
 }
 
+# Function: Get DNS Priority Status
+function get_dns_priority_status() {
+    if [[ ! -f "$GAI_CONF" ]]; then
+        echo -e "${BLUE}IPv6${RESET}"
+        return
+    fi
+    if grep -q '^precedence ::ffff:0:0/96' "$GAI_CONF"; then
+        # IPv4 priority
+        echo -e "${GREEN}IPv4${RESET}"
+    else
+        # Default or IPv6 priority
+        echo -e "${BLUE}IPv6${RESET}"
+    fi
+}
+
+# Function: Set DNS Priority (toggle)
+function set_dns_priority() {
+    # Backup gai.conf before change
+    if [[ -f "$GAI_CONF" ]]; then
+        cp "$GAI_CONF" "$BACKUP_GAI"
+        echo -e "${GREEN}✓ Backup saved to $BACKUP_GAI${RESET}"
+    fi
+
+    # If file does not exist, create it with default content
+    if [[ ! -f "$GAI_CONF" ]]; then
+        touch "$GAI_CONF"
+    fi
+
+    # Check and toggle
+    if grep -q '^precedence ::ffff:0:0/96' "$GAI_CONF"; then
+        # Currently IPv4, revert to IPv6
+        sudo sed -i 's/^precedence ::ffff:0:0\/96/#precedence ::ffff:0:0\/96/' "$GAI_CONF"
+        echo -e "DNS Priority changed to: ${BLUE}IPv6${RESET}"
+    else
+        # Currently IPv6, switch to IPv4
+        if grep -q '^#precedence ::ffff:0:0/96' "$GAI_CONF"; then
+            sudo sed -i 's/^#precedence ::ffff:0:0\/96/precedence ::ffff:0:0\/96/' "$GAI_CONF"
+        else
+            echo "precedence ::ffff:0:0/96  100" | sudo tee -a "$GAI_CONF" >/dev/null
+        fi
+        echo -e "DNS Priority changed to: ${GREEN}IPv4${RESET}"
+    fi
+    echo -e "Current DNS Priority: [$(get_dns_priority_status)]"
+    echo
+}
+
 # Show system info
 clear
 show_system_info
 
-# Menu
-echo -e "${BOLD}Choose an option:${RESET}"
-echo -e "${YELLOW}1)${RESET} Install / Update Sysctl Optimization (sysctl.conf)"
-echo -e "${YELLOW}2)${RESET} Install / Update Security Limits (limits.conf)"
-echo -e "${YELLOW}3)${RESET} Restore Previous sysctl.conf Configuration"
-echo -e "${YELLOW}4)${RESET} Restore Previous limits.conf Configuration"
-echo -e "${YELLOW}5)${RESET} Exit"
-echo
-read -p "Enter choice [1-5]: " option
+# Menu loop
+while true; do
+    echo -e "${BOLD}Choose an option:${RESET}"
+    echo -e "${YELLOW}1)${RESET} Install / Update Sysctl Optimization (sysctl.conf)"
+    echo -e "${YELLOW}2)${RESET} Install / Update Security Limits (limits.conf)"
+    echo -e "${YELLOW}3)${RESET} Restore Previous sysctl.conf Configuration"
+    echo -e "${YELLOW}4)${RESET} Restore Previous limits.conf Configuration"
+    echo -e "${YELLOW}5)${RESET} Exit"
+    echo -e "${YELLOW}6)${RESET} DNS Priority [$(get_dns_priority_status)]"
+    echo
+    read -p "Enter choice [1-6]: " option
 
-case "$option" in
-    1) install_bbr ;;
-    2) install_limits ;;
-    3) restore_backup ;;
-    4) restore_limits_backup ;;
-    5) echo -e "${GRAY}Exiting...${RESET}" ;;
-    *) echo -e "${RED}Invalid option.${RESET}" ;;
-esac
+    case "$option" in
+        1) install_bbr ;;
+        2) install_limits ;;
+        3) restore_backup ;;
+        4) restore_limits_backup ;;
+        5) echo -e "${GRAY}Exiting...${RESET}"; exit 0 ;;
+        6) set_dns_priority ;;
+        *) echo -e "${RED}Invalid option.${RESET}" ;;
+    esac
+    echo
+done
