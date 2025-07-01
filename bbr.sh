@@ -28,7 +28,6 @@ LIMITS_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/mai
 
 # gai.conf for DNS Priority
 GAI_CONF="/etc/gai.conf"
-BACKUP_GAI="/etc/gai.conf.bbr.bak"
 
 # Function: System Info
 function show_system_info() {
@@ -187,14 +186,8 @@ function get_dns_priority_status() {
     fi
 }
 
-# Function: Set DNS Priority (toggle)
+# Function: Set DNS Priority (toggle, no backup)
 function set_dns_priority() {
-    # Backup gai.conf before change
-    if [[ -f "$GAI_CONF" ]]; then
-        cp "$GAI_CONF" "$BACKUP_GAI"
-        echo -e "${GREEN}✓ Backup saved to $BACKUP_GAI${RESET}"
-    fi
-
     # If file does not exist, create it with default content
     if [[ ! -f "$GAI_CONF" ]]; then
         touch "$GAI_CONF"
@@ -214,6 +207,19 @@ function set_dns_priority() {
         fi
         echo -e "DNS Priority changed to: ${GREEN}IPv4${RESET}"
     fi
+
+    # Reload or restart systemd-resolved if available
+    if systemctl list-unit-files | grep -q systemd-resolved; then
+        if systemctl is-active --quiet systemd-resolved; then
+            sudo systemctl reload systemd-resolved 2>/dev/null || sudo systemctl restart systemd-resolved
+            echo -e "${AQUA}✓ systemd-resolved reloaded.${RESET}"
+        else
+            echo -e "${YELLOW}systemd-resolved is installed but not active.${RESET}"
+        fi
+    else
+        echo -e "${GRAY}systemd-resolved not found. No reload needed.${RESET}"
+    fi
+
     echo -e "Current DNS Priority: [$(get_dns_priority_status)]"
     echo
 }
@@ -229,8 +235,8 @@ while true; do
     echo -e "${YELLOW}2)${RESET} Install / Update Security Limits (limits.conf)"
     echo -e "${YELLOW}3)${RESET} Restore Previous sysctl.conf Configuration"
     echo -e "${YELLOW}4)${RESET} Restore Previous limits.conf Configuration"
-    echo -e "${YELLOW}5)${RESET} Exit"
-    echo -e "${YELLOW}6)${RESET} DNS Priority [$(get_dns_priority_status)]"
+    echo -e "${YELLOW}5)${RESET} DNS Priority [$(get_dns_priority_status)]"
+    echo -e "${YELLOW}6)${RESET} Exit"
     echo
     read -p "Enter choice [1-6]: " option
 
@@ -239,8 +245,8 @@ while true; do
         2) install_limits ;;
         3) restore_backup ;;
         4) restore_limits_backup ;;
-        5) echo -e "${GRAY}Exiting...${RESET}"; exit 0 ;;
-        6) set_dns_priority ;;
+        5) set_dns_priority ;;
+        6) echo -e "${GRAY}Exiting...${RESET}"; exit 0 ;;
         *) echo -e "${RED}Invalid option.${RESET}" ;;
     esac
     echo
