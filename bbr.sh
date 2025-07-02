@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Colors
 RED="\e[38;5;131m"
 GREEN="\e[38;5;108m"
 BLUE="\e[38;5;75m"
@@ -14,22 +13,18 @@ YELLOW="\e[38;5;228m"
 BOLD="\e[1m"
 RESET="\e[0m"
 
-# Paths - sysctl
 BACKUP_PATH="/etc/sysctl.conf.bbr.bak"
 SYSCTL_PATH="/etc/sysctl.conf"
 TMP_FILE="/tmp/sysctl.new"
 SYSCTL_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/sysctl.conf"
 
-# Paths - limits
 LIMITS_PATH="/etc/security/limits.conf"
 LIMITS_BACKUP="/etc/security/limits.conf.bbr.bak"
 LIMITS_TMP="/tmp/limits.new"
 LIMITS_URL="https://raw.githubusercontent.com/Shellgate/tcp_optimization_bbr/main/etc/security/limits.conf"
 
-# gai.conf for DNS Priority
 GAI_CONF="/etc/gai.conf"
 
-# Function: System Info
 function show_system_info() {
     CPU_MODEL=$(lscpu | grep "Model name" | sed 's/Model name:\s*//')
     CORES=$(nproc)
@@ -73,7 +68,6 @@ function show_system_info() {
     echo
 }
 
-# Function: Download and Apply sysctl.conf
 function install_bbr() {
     echo -e "${BLUE}→ Preparing to install system optimization...${RESET}"
     [[ -f "$BACKUP_PATH" ]] && rm -f "$BACKUP_PATH"
@@ -109,7 +103,6 @@ function install_bbr() {
     [[ "$confirm" =~ ^[Yy]$ ]] && reboot
 }
 
-# Function: Download and Apply limits.conf
 function install_limits() {
     echo -e "${BLUE}→ Preparing to install limits.conf optimization...${RESET}"
     [[ -f "$LIMITS_BACKUP" ]] && rm -f "$LIMITS_BACKUP"
@@ -144,7 +137,6 @@ function install_limits() {
     [[ "$confirm" =~ ^[Yy]$ ]] && reboot
 }
 
-# Function: Restore backup sysctl.conf
 function restore_backup() {
     if [[ -f "$BACKUP_PATH" ]]; then
         cp "$BACKUP_PATH" "$SYSCTL_PATH"
@@ -158,7 +150,6 @@ function restore_backup() {
     fi
 }
 
-# Function: Restore backup limits.conf
 function restore_limits_backup() {
     if [[ -f "$LIMITS_BACKUP" ]]; then
         cp "$LIMITS_BACKUP" "$LIMITS_PATH"
@@ -171,7 +162,6 @@ function restore_limits_backup() {
     fi
 }
 
-# Function: Get DNS Priority Status
 function get_dns_priority_status() {
     if [[ ! -f "$GAI_CONF" ]]; then
         echo -e "${BLUE}IPv6${RESET}"
@@ -184,18 +174,15 @@ function get_dns_priority_status() {
     fi
 }
 
-# Function: Set DNS Priority (toggle, only on correct line)
 function set_dns_priority() {
     if [[ ! -f "$GAI_CONF" ]]; then
         touch "$GAI_CONF"
     fi
 
     if grep -q '^precedence ::ffff:0:0/96  \+100$' "$GAI_CONF"; then
-        # IPv4 فعال است، برگردان به IPv6
         sudo sed -i 's/^precedence ::ffff:0:0\/96  \+100$/#precedence ::ffff:0:0\/96  100/' "$GAI_CONF"
         echo -e "DNS Priority changed to: ${BLUE}IPv6${RESET}"
     else
-        # فقط خط دقیق را آنکامنت کن یا اگر نبود اضافه کن
         sudo sed -i 's/^#precedence ::ffff:0:0\/96  \+100$/precedence ::ffff:0:0\/96  100/' "$GAI_CONF"
         if ! grep -q '^precedence ::ffff:0:0/96  \+100$' "$GAI_CONF"; then
             echo 'precedence ::ffff:0:0/96  100' | sudo tee -a "$GAI_CONF" >/dev/null
@@ -203,7 +190,6 @@ function set_dns_priority() {
         echo -e "DNS Priority changed to: ${GREEN}IPv4${RESET}"
     fi
 
-    # Reload or restart systemd-resolved if available
     if systemctl list-unit-files | grep -q systemd-resolved; then
         if systemctl is-active --quiet systemd-resolved; then
             sudo systemctl reload systemd-resolved 2>/dev/null || sudo systemctl restart systemd-resolved
@@ -219,11 +205,9 @@ function set_dns_priority() {
     echo
 }
 
-# Show system info
 clear
 show_system_info
 
-# Menu loop
 while true; do
     echo -e "${BOLD}Choose an option:${RESET}"
     echo -e "${YELLOW}1)${RESET} Install / Update Sysctl Optimization (sysctl.conf)"
