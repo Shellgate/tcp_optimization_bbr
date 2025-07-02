@@ -177,33 +177,28 @@ function get_dns_priority_status() {
         echo -e "${BLUE}IPv6${RESET}"
         return
     fi
-    if grep -q '^precedence ::ffff:0:0/96' "$GAI_CONF"; then
-        # IPv4 priority
+    if grep -q '^precedence ::ffff:0:0/96  \+100$' "$GAI_CONF"; then
         echo -e "${GREEN}IPv4${RESET}"
     else
-        # Default or IPv6 priority
         echo -e "${BLUE}IPv6${RESET}"
     fi
 }
 
-# Function: Set DNS Priority (toggle, no backup)
+# Function: Set DNS Priority (toggle, only on correct line)
 function set_dns_priority() {
-    # If file does not exist, create it with default content
     if [[ ! -f "$GAI_CONF" ]]; then
         touch "$GAI_CONF"
     fi
 
-    # Check and toggle
-    if grep -q '^precedence ::ffff:0:0/96' "$GAI_CONF"; then
-        # Currently IPv4, revert to IPv6
-        sudo sed -i 's/^precedence ::ffff:0:0\/96/#precedence ::ffff:0:0\/96/' "$GAI_CONF"
+    if grep -q '^precedence ::ffff:0:0/96  \+100$' "$GAI_CONF"; then
+        # IPv4 فعال است، برگردان به IPv6
+        sudo sed -i 's/^precedence ::ffff:0:0\/96  \+100$/#precedence ::ffff:0:0\/96  100/' "$GAI_CONF"
         echo -e "DNS Priority changed to: ${BLUE}IPv6${RESET}"
     else
-        # Currently IPv6, switch to IPv4
-        if grep -q '^#precedence ::ffff:0:0/96' "$GAI_CONF"; then
-            sudo sed -i 's/^#precedence ::ffff:0:0\/96/precedence ::ffff:0:0\/96/' "$GAI_CONF"
-        else
-            echo "precedence ::ffff:0:0/96  100" | sudo tee -a "$GAI_CONF" >/dev/null
+        # فقط خط دقیق را آنکامنت کن یا اگر نبود اضافه کن
+        sudo sed -i 's/^#precedence ::ffff:0:0\/96  \+100$/precedence ::ffff:0:0\/96  100/' "$GAI_CONF"
+        if ! grep -q '^precedence ::ffff:0:0/96  \+100$' "$GAI_CONF"; then
+            echo 'precedence ::ffff:0:0/96  100' | sudo tee -a "$GAI_CONF" >/dev/null
         fi
         echo -e "DNS Priority changed to: ${GREEN}IPv4${RESET}"
     fi
