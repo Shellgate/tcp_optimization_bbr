@@ -97,6 +97,7 @@ function install_bbr() {
             fi
         done <<< "$DIFF_OUTPUT"
     fi
+    ip tcp_metrics flush all > /dev/null 2>&1
     sysctl -p > /dev/null 2>&1
     echo
     read -p "→ Reboot system now? [y/N]: " confirm
