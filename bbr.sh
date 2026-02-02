@@ -135,9 +135,9 @@ install_systemd_security_limits() {
         cat <<EOF >> "$FILE"
 
 # systemd Security Limits
-DefaultLimitNOFILE=262144
-DefaultLimitNPROC=131072
-DefaultTasksMax=131072
+DefaultLimitNOFILE=1048576
+DefaultLimitNPROC=1048576
+DefaultTasksMax=1048576
 EOF
     done
 
